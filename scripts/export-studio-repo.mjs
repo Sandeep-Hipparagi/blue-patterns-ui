@@ -40,10 +40,13 @@ function copyDirSync(src, dest) {
   }
 }
 
-// 2. Copy source and public assets from apps/studio
-console.log('📁 Copying src/ and public/ assets...');
+// 2. Copy source, public assets, and pre-built dist from apps/studio
+console.log('📁 Copying src/, public/, and pre-built dist/ assets...');
 copyDirSync(path.join(root, 'apps/studio/src'), path.join(targetDir, 'src'));
 copyDirSync(path.join(root, 'apps/studio/public'), path.join(targetDir, 'public'));
+if (fs.existsSync(path.join(root, 'apps/studio/dist'))) {
+  copyDirSync(path.join(root, 'apps/studio/dist'), path.join(targetDir, 'dist'));
+}
 fs.copyFileSync(path.join(root, 'apps/studio/index.html'), path.join(targetDir, 'index.html'));
 
 // 3. Generate standalone package.json with pinned package versions
@@ -137,6 +140,7 @@ const studioViteConfig = `import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 
 export default defineConfig({
+  base: './',
   plugins: [react()],
   server: {
     port: 5173,
@@ -208,43 +212,21 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  build:
-    name: Build Studio Application
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: 11.10.0
-
-      - name: Setup Node.js 22
-        uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: 'pnpm'
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-
-      - name: Build Application
-        run: pnpm build
-
-      - name: Upload GitHub Pages Artifact
-        uses: actions/upload-pages-artifact@v3
-        with:
-          path: dist
-
   deploy:
     name: Deploy to GitHub Pages
     environment:
       name: github-pages
       url: \${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
-    needs: build
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Upload GitHub Pages Artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
