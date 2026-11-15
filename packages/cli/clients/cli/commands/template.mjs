@@ -388,7 +388,7 @@ export function registerTemplate(program) {
         const templates = registry.templates || [];
         if (json) {
           jsonOut({type: 'template.registry.list', data: templates});
-          return NO_RESULT_SET;
+          return;
         }
 
         emit(
@@ -411,9 +411,9 @@ export function registerTemplate(program) {
             ].join('\n'),
           ),
         );
-        return resultSet({count: templates.length, resultKind: 'template'});
+        return;
       } catch (err) {
-        return cliError(err.message);
+        cliError(err instanceof Error ? err.message : String(err));
       }
     });
 
@@ -452,7 +452,7 @@ export function registerTemplate(program) {
               valid: result.validationResults.every(v => v.valid),
             },
           });
-          return NO_RESULT_SET;
+          return;
         }
 
         const lines = [
@@ -479,9 +479,9 @@ export function registerTemplate(program) {
         }
 
         emit(text(lines.join('\n')));
-        return NO_RESULT_SET;
+        return;
       } catch (err) {
-        return cliError(err.message);
+        cliError(err instanceof Error ? err.message : String(err));
       }
     });
 }

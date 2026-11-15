@@ -44,6 +44,7 @@ export function dsValidateJsx(tsxCode) {
   }
 
   // 2. Check imports & JSX Elements AST
+  /** @param {any} node */
   function visit(node) {
     if (ts.isImportDeclaration(node)) {
       const moduleSpecifier = node.moduleSpecifier.getText(sourceFile).replace(/['"]/g, '');
@@ -103,7 +104,8 @@ async function loadRegistryFromSource(source) {
       }
       return await response.json();
     } catch (err) {
-      throw new Error(`Failed to fetch registry from remote URL '${source}': ${err.message}`);
+      const msg = err instanceof Error ? err.message : String(err);
+      throw new Error(`Failed to fetch registry from remote URL '${source}': ${msg}`);
     }
   }
 
