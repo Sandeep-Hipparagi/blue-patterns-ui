@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useTransition } from 'react';
-import { prefersReducedMotion } from './spring';
+import { prefersReducedMotion } from './spring.js';
 
 export interface PresenceProps {
   present: boolean;

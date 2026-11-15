@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Button, Badge } from '@blue-patterns/core';
 import { LineChart, BarChart, DonutChart, Sparkline } from '@blue-patterns/charts';
 

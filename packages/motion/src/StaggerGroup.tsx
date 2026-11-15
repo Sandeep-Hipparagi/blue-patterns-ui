@@ -1,5 +1,5 @@
 import React from 'react';
-import { prefersReducedMotion } from './spring';
+import { prefersReducedMotion } from './spring.js';
 
 export interface StaggerGroupProps {
   children: React.ReactNode;

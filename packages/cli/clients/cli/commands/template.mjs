@@ -424,13 +424,20 @@ export function registerTemplate(program) {
     .option('--dir <path>', 'Target directory or file path where template should be scaffolded')
     .option('--registry <url-or-path>', 'Registry URL or local path')
     .option('-f, --overwrite', 'Overwrite existing files if present')
-    .action(async (templateId, options) => {
+    .action(async (templateId, options, command) => {
       const json = program.opts().json || false;
+      const cmdOpts = (command && typeof command.opts === 'function') ? command.opts() : (options || {});
+      const overwrite = Boolean(
+        cmdOpts.overwrite ||
+        options?.overwrite ||
+        process.argv.includes('--overwrite') ||
+        process.argv.includes('-f')
+      );
       try {
         const result = await addTemplateFromRegistry(templateId, {
-          dir: options.dir,
-          registry: options.registry,
-          overwrite: options.overwrite,
+          dir: cmdOpts.dir || options?.dir,
+          registry: cmdOpts.registry || options?.registry,
+          overwrite: overwrite,
           cwd: process.cwd(),
         });
 

@@ -81,19 +81,22 @@ Blue-Patterns-UI is engineered around four non-negotiable principles:
 
 | Package | Version | Description |
 |---|---|---|
-| [`@blue-patterns/core`](packages/core) | `v0.7.17` | 116+ accessible primitives and composite components (Button, Dialog, Tabs, Accordion, Select, Table, etc.). |
-| [`@blue-patterns/motion`](packages/motion) | `v0.1.0` | Zero-dependency spring physics engine, WAAPI micro-interactions, `<Presence>`, `<Collapse>`, and `<SharedLayoutIndicator>`. |
-| [`@blue-patterns/charts`](packages/charts) | `v0.1.9` | High-performance SVG & Canvas data visualizations (`LineChart`, `BarChart`, `DonutChart`, `Sparkline`) consuming `--color-chart-1..8`. |
-| [`@blue-patterns/themes`](packages/themes) | `v0.1.0` | 8 brand theme packs (Default Blue, Obsidian, Editorial, Enterprise, Glass, Forest, Cobalt, High-Contrast) using CSS `light-dark()`. |
-| [`@blue-patterns/cli`](packages/cli) | `v0.7.17` | Developer CLI for scaffolding, AST auditing, and template registry operations (`template list`, `template add`). |
-| [`@blue-patterns/mcp`](packages/mcp) | `v0.1.0` | Model Context Protocol server exposing contracts (`ds_contract`) and AST syntax validation (`ds_validate_jsx`) to AI coding agents. |
-| [`@blue-patterns/build`](packages/build) | `v0.7.17` | Zero-plugin compiler pipeline extracting pre-compiled static CSS stylesheets for instant consumer adoption. |
+| [`@blue-patterns/core`](packages/core) | `v0.7.18` | 116+ accessible primitives and composite components (Button, Dialog, Tabs, Accordion, Select, Table, etc.). |
+| [`@blue-patterns/motion`](packages/motion) | `v0.7.18` | Zero-dependency spring physics engine, WAAPI micro-interactions, `<Presence>`, `<Collapse>`, and `<SharedLayoutIndicator>`. |
+| [`@blue-patterns/charts`](packages/charts) | `v0.7.18` | High-performance SVG & Canvas data visualizations (`LineChart`, `BarChart`, `DonutChart`, `Sparkline`) consuming `--color-chart-1..8`. |
+| [`@blue-patterns/themes`](packages/themes) | `v0.7.18` | 8 brand theme packs (Default Blue, Obsidian, Editorial, Enterprise, Glass, Forest, Cobalt, High-Contrast) using CSS `light-dark()`. |
+| [`@blue-patterns/cli`](packages/cli) | `v0.7.19` | Developer CLI for scaffolding, AST auditing, and template registry operations (`template list`, `template add`). |
+| [`@blue-patterns/mcp`](packages/mcp) | `v0.7.18` | Model Context Protocol server exposing contracts (`ds_contract`) and AST syntax validation (`ds_validate_jsx`) to AI coding agents. |
+| [`@blue-patterns/build`](packages/build) | `v0.7.18` | Zero-plugin compiler pipeline extracting pre-compiled static CSS stylesheets for instant consumer adoption. |
 
 ---
 
 ## 🎨 Blue-Patterns Studio (`apps/studio`)
 
 **Blue-Patterns Studio** is our interactive, 100% dogfooded workbench showcasing all capabilities without any 3rd-party UI libraries:
+- 🌐 **Live Studio App:** [sandeep-hipparagi.github.io/blue-patterns-studio](https://sandeep-hipparagi.github.io/blue-patterns-studio/)
+- 📦 **Live Registry Endpoint:** [sandeep-hipparagi.github.io/blue-patterns-studio/registry.json](https://sandeep-hipparagi.github.io/blue-patterns-studio/registry.json)
+- 💾 **Studio GitHub Repository:** [github.com/Sandeep-Hipparagi/blue-patterns-studio](https://github.com/Sandeep-Hipparagi/blue-patterns-studio)
 
 1. **Token & Motion Customizer:** Real-time color contrast tuning (WCAG 2.1 AA 4.5:1+), spring physics tuning (stiffness, damping, mass), and instant CSS custom property injection.
 2. **Component Matrix:** Live visual test matrix of all 116+ primitives across density modes (`compact`, `default`, `spacious`) and color schemes.

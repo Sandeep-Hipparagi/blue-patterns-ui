@@ -83,7 +83,7 @@
     "d3-shape": "^3.2.0"
   },
   "devDependencies": {
-    "@blue-patterns/cli": "workspace:*",
+    "@blue-patterns/cli": "*",
     "@babel/cli": "catalog:",
     "@babel/core": "catalog:",
     "@babel/preset-react": "catalog:",

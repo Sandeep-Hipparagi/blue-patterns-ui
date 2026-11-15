@@ -1,5 +1,5 @@
 import React, { useRef, useEffect, useState } from 'react';
-import { prefersReducedMotion } from './spring';
+import { prefersReducedMotion } from './spring.js';
 
 export interface CollapseProps {
   open: boolean;

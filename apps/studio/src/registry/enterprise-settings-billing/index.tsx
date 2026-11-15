@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Button, Badge, Tabs, Dialog } from '@blue-patterns/core';
 
 const MEMBERS = [

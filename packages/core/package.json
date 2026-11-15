@@ -47,6 +47,10 @@
       "types": "./src/astryx.css.d.ts",
       "default": "./dist/astryx.css"
     },
+    "./styles.css": {
+      "types": "./src/astryx.css.d.ts",
+      "default": "./dist/astryx.css"
+    },
     "./tailwind-theme.css": {
       "types": "./src/tailwind-theme.css.d.ts",
       "default": "./src/tailwind-theme.css"
@@ -950,9 +954,9 @@
     "react-dom": ">=19.0.0"
   },
   "devDependencies": {
-    "@blue-patterns/a11y-spec": "workspace:*",
-    "@blue-patterns/cli": "workspace:*",
-    "@blue-patterns/interaction-harness": "workspace:*",
+    "@blue-patterns/a11y-spec": "*",
+    "@blue-patterns/cli": "*",
+    "@blue-patterns/interaction-harness": "*",
     "@babel/cli": "catalog:",
     "@babel/core": "catalog:",
     "@babel/preset-react": "catalog:",
@@ -967,7 +971,7 @@
     "temporal-polyfill": "^1.0.6"
   },
   "dependencies": {
-    "@blue-patterns/motion": "workspace:*",
+    "@blue-patterns/motion": "^0.7.18",
     "intl-messageformat": "^11.2.9"
   },
   "publishConfig": {

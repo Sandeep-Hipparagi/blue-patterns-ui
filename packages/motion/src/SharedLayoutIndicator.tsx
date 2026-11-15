@@ -1,5 +1,5 @@
 import React, { useRef, useLayoutEffect, useState } from 'react';
-import { prefersReducedMotion } from './spring';
+import { prefersReducedMotion } from './spring.js';
 
 export interface SharedLayoutIndicatorProps {
   targetRect: DOMRect | null;
