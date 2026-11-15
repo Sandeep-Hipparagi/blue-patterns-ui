@@ -2,6 +2,7 @@
 import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
+import { execSync } from 'node:child_process';
 import { chromium } from 'playwright';
 import AxeBuilder from '@axe-core/playwright';
 
@@ -49,7 +50,13 @@ function createStaticServer(distDir) {
 async function runStudioVerification() {
   console.log('🚀 Starting Phase 2 Studio Visual & Accessibility Verification Suite...');
 
-  // 1. Start static server
+  // 1. Ensure Studio dist exists
+  if (!fs.existsSync(DIST_DIR) || !fs.existsSync(path.join(DIST_DIR, 'index.html'))) {
+    console.log('[build] apps/studio/dist not found, building studio with pnpm --filter @blue-patterns/studio build...');
+    execSync('pnpm --filter @blue-patterns/studio build', { stdio: 'inherit' });
+  }
+
+  // 2. Start static server
   const server = createStaticServer(DIST_DIR);
   await new Promise((resolve) => server.listen(5185, '127.0.0.1', resolve));
   const baseUrl = 'http://127.0.0.1:5185';
