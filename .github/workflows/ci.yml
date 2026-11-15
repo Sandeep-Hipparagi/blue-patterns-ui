@@ -1,0 +1,81 @@
+name: Blue-Patterns-UI CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    name: Build, Typecheck & AST Invariant Audit
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 11.10.0
+
+      - name: Setup Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Build packages
+        run: pnpm build
+
+      - name: Typecheck monorepo
+        run: pnpm typecheck
+
+      - name: CLI Template Registry Unit & Integration Tests
+        run: node --test packages/cli/test/template-registry.test.mjs
+
+      - name: AST Zero-Runtime & Token Invariant Audit
+        run: node scripts/validate-studio-ast.mjs
+
+  playwright-a11y:
+    name: Playwright & axe-core WCAG 2.1 AA Visual Audits
+    runs-on: ubuntu-latest
+    needs: validate
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 11.10.0
+
+      - name: Setup Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Install Playwright Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Execute Studio Verification & axe-core Audit
+        run: node scripts/verify-phase2-studio.mjs
+
+      - name: Upload Visual Screenshot Artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: studio-visual-screenshots
+          path: artifacts/screenshots/studio/
+          retention-days: 14

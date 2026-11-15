@@ -1,0 +1,43 @@
+name: New Theme Pack Proposal
+description: Propose or contribute a new brand theme pack for @blue-patterns/themes
+title: '[Theme]: '
+labels: ['theme-pack', 'enhancement']
+body:
+  - type: markdown
+    attributes:
+      value: |
+        We welcome community theme packs!
+        All themes in **@blue-patterns/themes** must use modern CSS `light-dark()` custom properties, meet **WCAG 2.1 AA** (4.5:1+ contrast for text/primary), and include a complete palette for charts 1-8.
+  - type: input
+    id: theme_name
+    attributes:
+      label: Theme Name
+      description: What is the proposed theme name? (e.g. Cyberpunk, Solarized, Nordic)
+      placeholder: Cyberpunk Neon
+    validations:
+      required: true
+  - type: textarea
+    id: palette_spec
+    attributes:
+      label: Palette Specification
+      description: Base hues, primary accent, surface tokens, and contrast ratios.
+      placeholder: |
+        - Primary Light: #0284c7 (4.8:1 contrast on white)
+        - Primary Dark: #38bdf8 (8.2:1 contrast on #0a0f1d)
+        - Surface Light: #ffffff, #f1f5f9
+        - Surface Dark: #0a0f1d, #161e2e
+    validations:
+      required: true
+  - type: checkboxes
+    id: invariants
+    attributes:
+      label: Verification Invariants
+      options:
+        - label: Theme uses only CSS custom properties (`--color-*`, `--spacing-*`, `--radius-*`)
+          required: true
+        - label: Tested with WCAG 2.1 AA contrast checker (all text >= 4.5:1)
+          required: true
+        - label: Includes definitions for `--color-chart-1` through `--color-chart-8`
+          required: true
+        - label: Exported as static CSS stylesheet (`theme-<name>.css`) with zero JS runtime
+          required: true

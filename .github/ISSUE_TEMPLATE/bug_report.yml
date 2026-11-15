@@ -1,0 +1,56 @@
+name: Bug Report
+description: Report a bug, rendering defect, or accessibility issue in Blue-Patterns-UI
+title: '[Bug]: '
+labels: ['bug', 'needs-triage']
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for reporting an issue in **Blue-Patterns-UI**!
+        Please ensure you have checked the [Forbidden Patterns checklist](https://github.com/BluePatterns-AI/blue-patterns-ui/blob/main/AGENTS.md) and searched existing issues before submitting.
+  - type: dropdown
+    id: package
+    attributes:
+      label: Affected Package
+      description: Which package contains the bug?
+      options:
+        - '@blue-patterns/core'
+        - '@blue-patterns/motion'
+        - '@blue-patterns/charts'
+        - '@blue-patterns/themes'
+        - '@blue-patterns/cli'
+        - '@blue-patterns/mcp'
+        - '@blue-patterns/studio'
+    validations:
+      required: true
+  - type: textarea
+    id: description
+    attributes:
+      label: Bug Description
+      description: A clear and concise description of the bug.
+      placeholder: Describe what happened and what you expected to happen.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Reproduction Steps
+      description: Minimal reproducible example or link to CodeSandbox / StackBlitz.
+      placeholder: |
+        1. Import '@blue-patterns/core/astryx.css'
+        2. Render <Button variant="secondary" ... />
+        3. See unexpected visual behavior
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment Info
+      description: Node version, browser, OS, package versions.
+      placeholder: |
+        - Node.js: 22.x
+        - React: 19.x
+        - Browser: Chrome 130 / Safari 18
+        - Package version: 0.1.0
+    validations:
+      required: true

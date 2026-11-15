@@ -1,0 +1,17 @@
+{
+  "compilerOptions": {
+    "strict": true,
+    "jsx": "react-jsx",
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "noEmit": true,
+    "skipLibCheck": true,
+    "paths": {
+      "@blue-patterns/core": ["../../packages/core/src"],
+      "@blue-patterns/core/*": ["../../packages/core/src/*"],
+      "@blue-patterns/theme/neutral": ["../../packages/themes/neutral/src/source.ts"],
+      "@stylexjs/stylex": ["../../node_modules/@stylexjs/stylex"]
+    }
+  },
+  "include": ["**/*.tsx"]
+}

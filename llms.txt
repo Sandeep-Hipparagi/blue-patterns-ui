@@ -1,0 +1,153 @@
+# Blue-Patterns-UI (Agent LLM Specification)
+> Low-latency, zero-runtime-CSS, tokenized React 19 design system.
+> Built on Meta's Astryx foundation with rea reverse-engineering validation.
+
+## Architectural Invariants
+1. Zero Runtime CSS: Only import pre-built static CSS stylesheets and typed React 19 ESM components.
+2. Strict CSS Tokenization: NEVER use hardcoded hex/RGB or raw pixel spacings. Use var(--color-*), var(--spacing-*), var(--radius-*), var(--motion-*).
+3. Reduced Motion: Every animation is guarded by @media (prefers-reduced-motion: no-preference) and defaults to 0ms/none.
+4. Co-located Contracts: Every component directory contains an authoritative .doc.mjs contract.
+
+## Monorepo Packages
+- @blue-patterns/core: Core React 19 primitive & composite UI components
+- @blue-patterns/motion: Zero-runtime WAAPI spring physics & micro-interactions (Presence, Collapse, SharedLayoutIndicator, StaggerGroup)
+- @blue-patterns/charts: Production SVG/Canvas data visualization (Sparkline, BarChart, LineChart, DonutChart)
+- @blue-patterns/themes: 8 ready-to-import theme packs with modern CSS light-dark() variables
+- @blue-patterns/mcp: Deterministic Model Context Protocol server exposing ds_search, ds_contract, ds_validate_jsx, ds_swizzle
+- @blue-patterns/cli: Developer and AI CLI for scaffolding, inspection, and swizzling
+- @blue-patterns/build: Esbuild/StyleX zero-plugin static CSS distribution toolchain
+
+## Standard Uniform Props API
+- size: 'xs' | 'sm' | 'md' | 'lg' | 'xl' (default: 'md')
+- variant: 'solid' | 'outline' | 'ghost' | 'soft' (default: 'solid')
+- tone: 'primary' | 'neutral' | 'success' | 'warning' | 'danger' | 'info' (default: 'primary')
+- motion: 'none' | 'subtle' | 'spring' (default: 'spring')
+- asChild: boolean (slot-based prop composition onto custom child)
+
+## 8 Ready-to-Import Theme CSS Packs
+1. @blue-patterns/themes/theme-default.css: Balanced neutral baseline
+2. @blue-patterns/themes/theme-obsidian.css: High-contrast developer dark-first palette
+3. @blue-patterns/themes/theme-editorial.css: Warm paper surfaces + serif typography
+4. @blue-patterns/themes/theme-enterprise.css: High-density compact spacing for SaaS
+5. @blue-patterns/themes/theme-glass.css: Translucent elevated surfaces with backdrop blur
+6. @blue-patterns/themes/theme-forest.css: Organic deep-green & warm sand tokens
+7. @blue-patterns/themes/theme-cobalt.css: Crisp fintech blue & slate hierarchy
+8. @blue-patterns/themes/theme-high-contrast.css: WCAG AAA 7:1+ contrast enforcement
+
+## Component Index (116 components)
+- **Accordion** (`@blue-patterns/core`): Accessible disclosure group powered by zero-dependency spring height transitions. [packages/core/src/Accordion/Accordion.doc.mjs]
+- **AlertDialog** (`@blue-patterns/core`): AlertDialog asks the user to confirm a destructive or irreversible action before it happens. Use it for things like deleting content, revoking access, or discarding unsaved changes.\n\nIt implements the WAI-ARIA APG [Alert Dialog pattern](https://www.w3.org/WAI/ARIA/apg/patterns/alertdialog/):  [packages/core/src/AlertDialog/AlertDialog.doc.mjs]
+- **AppShell** (`@blue-patterns/core`): AppShell is the page shell for an application. It provides slots for top navigation, side navigation, banners, and main content. Use it as the root wrapper for every page. It handles responsive mobile navigation and skip-to-content automatically. Configure side nav collapse on SideNav with its collapsible prop. [packages/core/src/AppShell/AppShell.doc.mjs]
+- **AspectRatio** (`@blue-patterns/core`): Maintains a fixed width-to-height ratio for its children as its container resizes. Use it for media containers like videos, images, thumbnails, or any content that needs consistent proportions. It takes its width from the container and derives its height from the ratio, so it needs an ancestor with a definite width. [packages/core/src/AspectRatio/AspectRatio.doc.mjs]
+- **Avatar** (`@blue-patterns/core`): Avatar represents a person or team with a profile photo, initials, or a default icon. Use it in comment headers, contact lists, chat messages, user cards, and anywhere you need to identify someone visually. [packages/core/src/Avatar/Avatar.doc.mjs]
+- **AvatarGroup** (`@blue-patterns/core`): AvatarGroup displays multiple avatars in an overlapping row with an optional overflow indicator. Uses a compositional API: pass Avatar children directly so each avatar can carry its own props (status dots, click handlers, etc.). [packages/core/src/AvatarGroup/AvatarGroup.doc.mjs]
+- **Badge** (`@blue-patterns/core`): Visual style variant. Semantic variants (neutral, info, success, warning, error) use solid backgrounds. Non-semantic color variants use tinted backgrounds with colored text for categorization and tagging. [packages/core/src/Badge/Badge.doc.mjs]
+- **Banner** (`@blue-patterns/core`): Banner shows a persistent message at the top of a page or section. Use it for form errors, system updates, maintenance notices, or success confirmations that the user needs to see until they act on it. [packages/core/src/Banner/Banner.doc.mjs]
+- **BarChart** (`@blue-patterns/charts`): Production-ready responsive bar chart with keyboard navigation and strict theme color tokens. [packages/charts/src/BarChart.doc.mjs]
+- **Blockquote** (`@blue-patterns/core`): Content of the blockquote. [packages/core/src/Blockquote/Blockquote.doc.mjs]
+- **BottomSheet** (`@blue-patterns/core`): Painted surface that rises from the bottom edge and contains the sheet. [packages/core/src/BottomSheet/BottomSheet.doc.mjs]
+- **Breadcrumbs** (`@blue-patterns/core`): Breadcrumbs show a trail of links from the root to the current page. Use them at the top of detail pages, settings panels, or anywhere the user needs to see where they are and navigate back up. [packages/core/src/Breadcrumbs/Breadcrumbs.doc.mjs]
+- **Button** (`@blue-patterns/core`): Button triggers an action when clicked. Use it for form submissions, confirmations, navigation, or any interaction that needs a clear call to action. [packages/core/src/Button/Button.doc.mjs]
+- **ButtonGroup** (`@blue-patterns/core`): Groups multiple buttons together with connected styling: shared borders, proper border-radius handling (only on outer edges), and horizontal or vertical orientation. Under the touch presentation a press tracks like a menu: press a button and slide across the others, and the highlight follows. The button you lift on runs, and lifting outside the group runs nothing. A mouse press acts as a native button\ [packages/core/src/ButtonGroup/ButtonGroup.doc.mjs]
+- **Calendar** (`@blue-patterns/core`): Calendar lets the user pick a date or date range from a month grid. Use it in booking flows, scheduling UIs, date filters, or anywhere the user needs to see surrounding dates for context. [packages/core/src/Calendar/Calendar.doc.mjs]
+- **Card** (`@blue-patterns/core`): Card is a bordered, elevated container for discrete, self-contained items: things you could reorder, remove, or interact with independently. Cards are NOT the default layout tool. Most content groups don\ [packages/core/src/Card/Card.doc.mjs]
+- **Carousel** (`@blue-patterns/core`): Carousel scrolls a row of items horizontally when they overflow the available width. Use it for card grids, image galleries, product lists, or any set of items that should be browsable without taking up the full page. [packages/core/src/Carousel/Carousel.doc.mjs]
+- **Center** (`@blue-patterns/core`): Which Center mode to use. In horizontal writing,  [packages/core/src/Center/Center.doc.mjs]
+- **Chart** (`@blue-patterns/charts`): Chart lays out one or more mark definitions against shared responsive x and y scales. Use it for data visualizations that combine Astryx chart marks, axes, grids, legends, tooltips, and custom interaction layers. [packages/charts/src/Chart.doc.mjs]
+- **ChartAxis** (`@blue-patterns/charts`): ChartAxis renders tick labels and optional edge and tick lines from the scales owned by a parent Chart. Use it in the Chart axes slot for physical top, right, bottom, or left plot edges. [packages/charts/src/ChartAxis.doc.mjs]
+- **ChartGrid** (`@blue-patterns/charts`): ChartGrid draws horizontal and vertical guide lines from the scales owned by a parent Chart. Use it in the Chart grid slot so guides share the plot dimensions and tick values used by the chart. [packages/charts/src/ChartGrid.doc.mjs]
+- **ChartLegend** (`@blue-patterns/charts`): ChartLegend pairs series labels with decorative mark-shaped color swatches. Use Chart legend options for the generated legend, or render ChartLegend directly when the caller already owns the legend items. [packages/charts/src/ChartLegend.doc.mjs]
+- **ChartSwatch** (`@blue-patterns/charts`): ChartSwatch renders the small decorative mark that pairs a chart series color with its visible label. Use a square for bar series and a short line for other series, including line, dot, and area marks. [packages/charts/src/ChartSwatch.doc.mjs]
+- **ChartTooltip** (`@blue-patterns/charts`): ChartTooltip shows grouped values for the chart position nearest the pointer. Use Chart’s tooltip prop or its configuration object for the standard integration; direct composition remains available when you need explicit child composition. [packages/charts/src/ChartTooltip.doc.mjs]
+- **Chat** (`@blue-patterns/core`): Border radius of the composer body. Inner elements derive their radius concentrically. [packages/core/src/Chat/Chat.doc.mjs]
+- **CheckboxInput** (`@blue-patterns/core`): Ref forwarded to the underlying <input> element. [packages/core/src/CheckboxInput/CheckboxInput.doc.mjs]
+- **CheckboxList** (`@blue-patterns/core`): Container for the labeled checkbox group. [packages/core/src/CheckboxList/CheckboxList.doc.mjs]
+- **Citation** (`@blue-patterns/core`): Citations display inline references to external sources. Use them to attribute information within AI-generated responses, articles, or anywhere provenance and source links are needed. [packages/core/src/Citation/Citation.doc.mjs]
+- **ClickableCard** (`@blue-patterns/core`): An interactive card for navigation or action targets. Nested interactive elements work independently. [packages/core/src/ClickableCard/ClickableCard.doc.mjs]
+- **Code** (`@blue-patterns/core`): Inline code element with a monospace font and muted background. Use it for short code references within prose. [packages/core/src/Code/Code.doc.mjs]
+- **CodeBlock** (`@blue-patterns/core`): Fenced code block with syntax highlighting. Use for multi-line code snippets. [packages/core/src/CodeBlock/CodeBlock.doc.mjs]
+- **Collapsible** (`@blue-patterns/core`): A primitive that makes any content collapsible: a trigger button toggles visibility of the content area, managing its own state or deferring to a parent CollapsibleGroup. [packages/core/src/Collapsible/Collapsible.doc.mjs]
+- **CommandPalette** (`@blue-patterns/core`): Modal surface that contains the command palette. [packages/core/src/CommandPalette/CommandPalette.doc.mjs]
+- **ComplexSelector** (`@blue-patterns/core`): Field shell that provides the label and optional supporting field content. [packages/core/src/ComplexSelector/ComplexSelector.doc.mjs]
+- **ContextMenu** (`@blue-patterns/core`): Caller-provided region that accepts right-click, keyboard context-menu, and long-press input. [packages/core/src/ContextMenu/ContextMenu.doc.mjs]
+- **DateInput** (`@blue-patterns/core`): Label text. [packages/core/src/DateInput/DateInput.doc.mjs]
+- **DateRangeInput** (`@blue-patterns/core`): Label text. [packages/core/src/DateRangeInput/DateRangeInput.doc.mjs]
+- **DateTimeInput** (`@blue-patterns/core`): Label text. [packages/core/src/DateTimeInput/DateTimeInput.doc.mjs]
+- **Dialog** (`@blue-patterns/core`): Border radius of the dialog [packages/core/src/Dialog/Dialog.doc.mjs]
+- **Divider** (`@blue-patterns/core`): Separator group that arranges one or two rules around an optional label. [packages/core/src/Divider/Divider.doc.mjs]
+- **DonutChart** (`@blue-patterns/charts`): Radial donut chart with automatic percentage calculations, interactive segments, and center summary slot. [packages/charts/src/DonutChart.doc.mjs]
+- **Drawer** (`@blue-patterns/core`): The root <dialog> element: a full-height surface anchored to the inline start or end edge, flush with three viewport edges (square corners). [packages/core/src/Drawer/Drawer.doc.mjs]
+- **DropdownMenu** (`@blue-patterns/core`): Button that opens and closes the selected menu presentation. [packages/core/src/DropdownMenu/DropdownMenu.doc.mjs]
+- **EmptyState** (`@blue-patterns/core`): Primary message rendered as the configured heading level inside the empty state. [packages/core/src/EmptyState/EmptyState.doc.mjs]
+- **Field** (`@blue-patterns/core`): Use Field for controls that do not already provide field under the hood. [packages/core/src/Field/Field.doc.mjs]
+- **FieldStatus** (`@blue-patterns/core`): Painted container for the validation feedback. [packages/core/src/FieldStatus/FieldStatus.doc.mjs]
+- **FileInput** (`@blue-patterns/core`): Accessible label for the file input. [packages/core/src/FileInput/FileInput.doc.mjs]
+- **FormLayout** (`@blue-patterns/core`): Controls field arrangement. Vertical stacks top-to-bottom, horizontal uses one fractional grid track per field in logical inline order, and horizontal-labels uses CSS Grid with labels beside inputs on the inline-start side (collapsing to vertical when the viewport is <=480px). [packages/core/src/FormLayout/FormLayout.doc.mjs]
+- **Grid** (`@blue-patterns/core`): Two-dimensional layout container that arranges caller-supplied items in rows and columns. [packages/core/src/Grid/Grid.doc.mjs]
+- **HoverCard** (`@blue-patterns/core`): Border radius of the hover card [packages/core/src/HoverCard/HoverCard.doc.mjs]
+- **Icon** (`@blue-patterns/core`): Visual symbol rendered for the selected icon. [packages/core/src/Icon/Icon.doc.mjs]
+- **IconButton** (`@blue-patterns/core`): Accessible label. Used as aria-label (not rendered as visible text). [packages/core/src/IconButton/IconButton.doc.mjs]
+- **Indicator** (`@blue-patterns/core`): Decorative control visuals: the mark on a chosen option, the box a checkbox draws, the circle a radio draws. Rendered by Selector, CheckboxInput, RadioList, and menu selection rows. Replace one by name through defineTheme({indicators}) and every component drawing it follows. [packages/core/src/Indicator/Indicator.doc.mjs]
+- **InfoTip** (`@blue-patterns/core`): Small round native button, named by  [packages/core/src/InfoTip/InfoTip.doc.mjs]
+- **InputGroup** (`@blue-patterns/core`): Groups an input with prefix and suffix addons in one connected row. A focused member stays above its neighbours, so its focus ring shows in full. [packages/core/src/InputGroup/InputGroup.doc.mjs]
+- **Item** (`@blue-patterns/core`): Supporting text [packages/core/src/Item/Item.doc.mjs]
+- **Kbd** (`@blue-patterns/core`): Group that presents the complete keyboard shortcut and its accessible name. [packages/core/src/Kbd/Kbd.doc.mjs]
+- **Layer** (`@blue-patterns/core`): Layer utilities provide the app-level provider used by overlay systems. Use LayerProvider at the app root for toast/layer configuration; use higher-level Popover, HoverCard, or Tooltip APIs for most overlay UI. Rendered layer content, not the provider’s application subtree, uses theme body text defaults and exits ancestor surface/group membership. Establish intentional groups and complete required providers inside each layer. Every anchored layer keeps a gutter from each viewport edge — the spacing-4 step or the device safe-area inset, whichever is larger — and is capped to the viewport, never to the room beside its trigger: an explicit width renders at its size, flips when it does not fit beside the trigger, and slides into view when it fits on neither side. An app that floats a persistent bar over a viewport edge declares it once as inset on LayerProvider (blockStart, blockEnd, inlineStart, inlineEnd); each edge adds to that edge\u2019s gutter for every anchored layer and moves the toast viewport by the same amount, and defaults to zero. The inset is app configuration, not a theme value. [packages/core/src/Layer/Layer.doc.mjs]
+- **Layout** (`@blue-patterns/core`): General layout primitive that places the header, start, content, end, and footer slots. [packages/core/src/Layout/Layout.doc.mjs]
+- **Lightbox** (`@blue-patterns/core`): Full-viewport dialog overlay that contains the active media and controls. [packages/core/src/Lightbox/Lightbox.doc.mjs]
+- **LineChart** (`@blue-patterns/charts`): Smooth responsive time-series and categorical trend line chart with optional gradient area fill. [packages/charts/src/LineChart.doc.mjs]
+- **Link** (`@blue-patterns/core`): Styled anchor link with variants, external link support, and polymorphic rendering. [packages/core/src/Link/Link.doc.mjs]
+- **List** (`@blue-patterns/core`): Width of the divider below a divided row, 0 on the last row. The row [packages/core/src/List/List.doc.mjs]
+- **Markdown** (`@blue-patterns/core`): Root container for block or inline Markdown content. [packages/core/src/Markdown/Markdown.doc.mjs]
+- **MetadataList** (`@blue-patterns/core`): Container for metadata items with column layout, orientation, and collapse support. [packages/core/src/MetadataList/MetadataList.doc.mjs]
+- **MobileNav** (`@blue-patterns/core`): Full-viewport dialog overlay that hosts the mobile navigation drawer. [packages/core/src/MobileNav/MobileNav.doc.mjs]
+- **MoreMenu** (`@blue-patterns/core`): Icon-only Button that provides the visible overflow-menu entry point. [packages/core/src/MoreMenu/MoreMenu.doc.mjs]
+- **motion** (`@blue-patterns/motion`): Zero-runtime dependency spring physics, WAAPI micro-interactions, and View Transitions for Blue-Patterns-UI. [packages/motion/src/motion.doc.mjs]
+- **MultiSelector** (`@blue-patterns/core`): Standalone Field shell that provides the label and optional supporting content; omitted inside InputGroup. [packages/core/src/MultiSelector/MultiSelector.doc.mjs]
+- **NavIcon** (`@blue-patterns/core`): Circular painted container for the supplied icon. [packages/core/src/NavIcon/NavIcon.doc.mjs]
+- **NavMenu** (`@blue-patterns/core`): Menu container for nav-heading actions, with menu semantics and keyboard navigation. [packages/core/src/NavMenu/NavMenu.doc.mjs]
+- **NumberInput** (`@blue-patterns/core`): Label text for the input (always rendered for accessibility). [packages/core/src/NumberInput/NumberInput.doc.mjs]
+- **Outline** (`@blue-patterns/core`): Navigation container for the same-page heading links and indicator. [packages/core/src/Outline/Outline.doc.mjs]
+- **OverflowList** (`@blue-patterns/core`): Visible horizontal list container for the currently shown content. [packages/core/src/OverflowList/OverflowList.doc.mjs]
+- **Overlay** (`@blue-patterns/core`): Overlay layers action or supporting content over media, cards, video, or other bounded surfaces with an optional scrim and reveal behavior. Host attributes and DOM handlers (id, data-*, aria-*) reach the root element. [packages/core/src/Overlay/Overlay.doc.mjs]
+- **Pagination** (`@blue-patterns/core`): Navigation landmark containing the current paging controls and optional page-size selector. [packages/core/src/Pagination/Pagination.doc.mjs]
+- **Popover** (`@blue-patterns/core`): A click-triggered popover for displaying interactive content anchored to a trigger element. [packages/core/src/Popover/Popover.doc.mjs]
+- **PowerSearch** (`@blue-patterns/core`): Configuration defining available fields, operators, and their value types. [packages/core/src/PowerSearch/PowerSearch.doc.mjs]
+- **ProgressBar** (`@blue-patterns/core`): Container arranging the label row and progress track. [packages/core/src/ProgressBar/ProgressBar.doc.mjs]
+- **RadioList** (`@blue-patterns/core`): Radio group container with field integration for label, description, and status. [packages/core/src/RadioList/RadioList.doc.mjs]
+- **Resizable** (`@blue-patterns/core`): Focusable separator that owns pointer and keyboard resize interaction. [packages/core/src/Resizable/Resizable.doc.mjs]
+- **ScrollableArea** (`@blue-patterns/core`): Provides a native scroll viewport and a real observed content box. The viewport enters the tab order only while a requested logical axis is effectively scrollable, and containment applies only to effective axes. [packages/core/src/ScrollableArea/ScrollableArea.doc.mjs]
+- **Section** (`@blue-patterns/core`): Painted container that groups a page region. [packages/core/src/Section/Section.doc.mjs]
+- **SegmentedControl** (`@blue-patterns/core`): Container for the mutually exclusive segment choices. [packages/core/src/SegmentedControl/SegmentedControl.doc.mjs]
+- **SelectableCard** (`@blue-patterns/core`): A card that toggles between selected and unselected states with an accent border. For navigation use ClickableCard. [packages/core/src/SelectableCard/SelectableCard.doc.mjs]
+- **Selector** (`@blue-patterns/core`): Standalone Field shell that provides the label and optional supporting content; omitted inside InputGroup. [packages/core/src/Selector/Selector.doc.mjs]
+- **SideNav** (`@blue-patterns/core`): Container with five zones: header, topContent, children (scrollable), footer, and footerIcons. Supports collapsible and resizable modes. [packages/core/src/SideNav/SideNav.doc.mjs]
+- **Skeleton** (`@blue-patterns/core`): Painted shape that stands in for content while it loads. [packages/core/src/Skeleton/Skeleton.doc.mjs]
+- **Slider** (`@blue-patterns/core`): Text identifying the numeric setting controlled by the slider. [packages/core/src/Slider/Slider.doc.mjs]
+- **Sparkline** (`@blue-patterns/charts`): Lightweight inline trend chart with keyboard exploration and tokenized strokes. [packages/charts/src/Sparkline.doc.mjs]
+- **Spinner** (`@blue-patterns/core`): Spinner size: ring diameter (10px, 14px, 18px, 28px). [packages/core/src/Spinner/Spinner.doc.mjs]
+- **Stack** (`@blue-patterns/core`): Layout container that arranges content along one flex axis. [packages/core/src/Stack/Stack.doc.mjs]
+- **StatusDot** (`@blue-patterns/core`): Painted status dot that carries the selected semantic variant. [packages/core/src/StatusDot/StatusDot.doc.mjs]
+- **Stepper** (`@blue-patterns/core`): Steppers display progress through a sequence of logical and numbered steps. Use them for multi-step workflows like forms, onboarding flows, or checkout processes where users need to see their position and the steps ahead. Rendered as an ordered list (not a navigation landmark). [packages/core/src/Stepper/Stepper.doc.mjs]
+- **Switch** (`@blue-patterns/core`): Container arranging the switch, label, and feedback. [packages/core/src/Switch/Switch.doc.mjs]
+- **Table** (`@blue-patterns/core`): Semantic table element that groups the table sections, rows, and cells. [packages/core/src/Table/Table.doc.mjs]
+- **TabList** (`@blue-patterns/core`): Vertical offset of the selected-tab indicator from the tab bottom edge. A host that draws its own bottom divider (Toolbar) sets this so the indicator sits on the divider instead of above it. [packages/core/src/TabList/TabList.doc.mjs]
+- **Tabs** (`@blue-patterns/core`): Keyboard-accessible tab interface with animated FLIP sliding indicators powered by @blue-patterns/motion. [packages/core/src/Tabs/Tabs.doc.mjs]
+- **Text** (`@blue-patterns/core`): Polymorphic text element that renders the supplied content with themed typography. [packages/core/src/Text/Text.doc.mjs]
+- **TextArea** (`@blue-patterns/core`): Text identifying the multi-line field. [packages/core/src/TextArea/TextArea.doc.mjs]
+- **TextInput** (`@blue-patterns/core`): The HTML input type.  [packages/core/src/TextInput/TextInput.doc.mjs]
+- **theme** (`@blue-patterns/core`): Wraps a subtree with a specific Astryx theme. For static production themes, use  [packages/core/src/theme/theme.doc.mjs]
+- **Thumbnail** (`@blue-patterns/core`): Image source URL. [packages/core/src/Thumbnail/Thumbnail.doc.mjs]
+- **TimeInput** (`@blue-patterns/core`): TimeInput uses a browser/OS time picker on coarse pointers by default and Astryx [packages/core/src/TimeInput/TimeInput.doc.mjs]
+- **Timer** (`@blue-patterns/core`): Semantic time element containing a standardized elapsed duration. [packages/core/src/Timer/Timer.doc.mjs]
+- **Timestamp** (`@blue-patterns/core`): The date/time to display. Accepts Unix timestamps (seconds) or ISO 8601 strings. [packages/core/src/Timestamp/Timestamp.doc.mjs]
+- **Toast** (`@blue-patterns/core`): Primary message content. [packages/core/src/Toast/Toast.doc.mjs]
+- **ToggleButton** (`@blue-patterns/core`): A button that toggles between pressed and unpressed states. Thin wrapper over Button with controlled toggle pattern, icon swap, and font weight emphasis. [packages/core/src/ToggleButton/ToggleButton.doc.mjs]
+- **Token** (`@blue-patterns/core`): Text label displayed inside the token. [packages/core/src/Token/Token.doc.mjs]
+- **Tokenizer** (`@blue-patterns/core`): Accessible label for the input. [packages/core/src/Tokenizer/Tokenizer.doc.mjs]
+- **Toolbar** (`@blue-patterns/core`): Section-owned container that supplies the toolbar surface, padding, and selected divider edges. [packages/core/src/Toolbar/Toolbar.doc.mjs]
+- **Tooltip** (`@blue-patterns/core`): Painted overlay surface that presents the tooltip. [packages/core/src/Tooltip/Tooltip.doc.mjs]
+- **TopNav** (`@blue-patterns/core`): Main navigation bar container with slot-based layout. Children are accepted as an alias for startContent. [packages/core/src/TopNav/TopNav.doc.mjs]
+- **TreeList** (`@blue-patterns/core`): Container that presents the hierarchical tree. [packages/core/src/TreeList/TreeList.doc.mjs]
+- **Typeahead** (`@blue-patterns/core`): Standalone Field shell that provides the label and optional supporting content; omitted inside InputGroup. [packages/core/src/Typeahead/Typeahead.doc.mjs]
+- **VisuallyHidden** (`@blue-patterns/core`): Content exposed to assistive technology while hidden from sight. [packages/core/src/VisuallyHidden/VisuallyHidden.doc.mjs]

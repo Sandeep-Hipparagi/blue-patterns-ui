@@ -1,0 +1,9 @@
+{
+  "name": "@blue-patterns/canary",
+  "astryx": {
+    "canaryOnly": true
+  },
+  "exports": {
+    ".": "./index.js"
+  }
+}

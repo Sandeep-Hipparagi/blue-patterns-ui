@@ -30,7 +30,8 @@
   },
   "bin": {
     "astryx": "./clients/cli/bin/astryx.mjs",
-    "cli": "./clients/cli/bin/astryx.mjs"
+    "cli": "./clients/cli/bin/astryx.mjs",
+    "blue-patterns": "./bin/cli.js"
   },
   "exports": {
     ".": "./clients/cli/bin/astryx.mjs",

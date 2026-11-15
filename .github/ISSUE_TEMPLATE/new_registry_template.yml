@@ -1,0 +1,57 @@
+name: New Registry Template Submission
+description: Submit a new community template for the Blue-Patterns Template Registry
+title: '[Template]: '
+labels: ['template-submission', 'community']
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Templates submitted to the **Blue-Patterns Template Registry** (`public/registry.json`) are scaffoldable via `@blue-patterns/cli template add <id>` and displayed in Blue-Patterns Studio.
+  - type: input
+    id: template_id
+    attributes:
+      label: Template ID (slug)
+      description: Lowercase alphanumeric kebab-case ID.
+      placeholder: calendar-timeline-view
+    validations:
+      required: true
+  - type: input
+    id: template_title
+    attributes:
+      label: Template Title
+      placeholder: Interactive Calendar & Timeline
+    validations:
+      required: true
+  - type: dropdown
+    id: category
+    attributes:
+      label: Category
+      options:
+        - Conversational AI
+        - Data & Dashboards
+        - Administrative & Security
+        - Productivity & Workflows
+        - E-Commerce & Retail
+        - Marketing & Landing
+    validations:
+      required: true
+  - type: textarea
+    id: template_description
+    attributes:
+      label: Description
+      placeholder: Detailed summary of what this template provides and how it works.
+    validations:
+      required: true
+  - type: checkboxes
+    id: invariants
+    attributes:
+      label: Strict Invariants Checklist
+      options:
+        - label: 100% Dogfooding (built exclusively with `@blue-patterns/*` components, zero external component libraries)
+          required: true
+        - label: Zero hardcoded hex colors or inline pixel styles (passes `ds_validate_jsx`)
+          required: true
+        - label: Fully keyboard accessible (WCAG 2.1 AA with 0 axe-core violations)
+          required: true
+        - label: Includes motion with `prefers-reduced-motion` guards
+          required: true

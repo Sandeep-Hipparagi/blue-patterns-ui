@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="default">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Blue-Patterns-UI Phase 1 Verification Preview</title>
+  <!-- Theme Stylesheets -->
+  <link rel="stylesheet" href="../packages/themes/theme-default.css" id="theme-link">
+  <link rel="stylesheet" href="../packages/motion/motion.css">
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    body {
+      background-color: var(--color-surface-base);
+      color: var(--color-text-primary);
+      font-family: var(--typography-font-sans, system-ui, sans-serif);
+      padding: var(--spacing-6, 24px);
+      min-height: 100vh;
+      transition: background-color var(--motion-duration-normal) var(--motion-spring-gentle);
+    }
+    .preview-container {
+      max-width: 1080px;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: var(--spacing-6, 24px);
+    }
+    .preview-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-bottom: var(--spacing-4, 16px);
+      border-bottom: 1px solid var(--color-neutral-border);
+    }
+    .theme-controls {
+      display: flex;
+      gap: var(--spacing-2, 8px);
+      align-items: center;
+    }
+    /* Button Primitives */
+    .bp-button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 500;
+      font-size: var(--typography-size-sm, 14px);
+      padding: var(--spacing-2, 8px) var(--spacing-4, 16px);
+      border-radius: var(--radius-md, 8px);
+      border: 1px solid transparent;
+      cursor: pointer;
+      outline: none;
+      transition: transform var(--motion-duration-fast) var(--motion-spring-snappy),
+                  background-color var(--motion-duration-fast) ease;
+    }
+    .bp-button:hover {
+      transform: translateY(-1px);
+    }
+    .bp-button:active {
+      transform: translateY(0);
+    }
+    .bp-button-solid-primary {
+      background-color: var(--color-primary-base);
+      color: var(--color-primary-contrast);
+    }
+    .bp-button-outline-neutral {
+      background-color: transparent;
+      border-color: var(--color-neutral-border);
+      color: var(--color-text-primary);
+    }
+    .bp-button-soft-info {
+      background-color: var(--color-info-subtle);
+      color: var(--color-info-base);
+    }
+    .bp-button-disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    /* Grid & Card Containers */
+    .preview-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: var(--spacing-6, 24px);
+    }
+    .preview-card {
+      background-color: var(--color-surface-elevated);
+      border: 1px solid var(--color-neutral-border);
+      border-radius: var(--radius-lg, 12px);
+      padding: var(--spacing-5, 20px);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+    }
+    .preview-card-title {
+      font-size: var(--typography-size-lg, 18px);
+      font-weight: 600;
+      margin-bottom: var(--spacing-4, 16px);
+      color: var(--color-text-primary);
+    }
+    /* Tabs Primitives */
+    .bp-tablist {
+      display: inline-flex;
+      position: relative;
+      background-color: var(--color-surface-sunken);
+      padding: var(--spacing-1, 4px);
+      border-radius: var(--radius-md, 8px);
+      gap: var(--spacing-1, 4px);
+    }
+    .bp-tab {
+      background: none;
+      border: none;
+      padding: var(--spacing-2, 8px) var(--spacing-4, 16px);
+      border-radius: var(--radius-sm, 4px);
+      font-size: var(--typography-size-sm, 14px);
+      color: var(--color-text-secondary);
+      cursor: pointer;
+      font-weight: 500;
+      outline: none;
+      position: relative;
+      z-index: 2;
+    }
+    .bp-tab[aria-selected="true"] {
+      color: var(--color-primary-base);
+      font-weight: 600;
+    }
+    .bp-tab-indicator {
+      position: absolute;
+      top: var(--spacing-1, 4px);
+      left: var(--spacing-1, 4px);
+      height: calc(100% - var(--spacing-1, 4px) * 2);
+      width: 90px;
+      background-color: var(--color-surface-base);
+      border-radius: var(--radius-sm, 4px);
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+      transition: transform var(--motion-duration-normal) var(--motion-spring-snappy);
+      z-index: 1;
+    }
+    .bp-tabpanel {
+      padding-top: var(--spacing-4, 16px);
+      color: var(--color-text-secondary);
+      font-size: var(--typography-size-sm, 14px);
+    }
+    /* Dialog Primitives */
+    .bp-dialog-overlay {
+      position: relative;
+      background-color: var(--color-surface-elevated);
+      border: 1px solid var(--color-neutral-border);
+      border-radius: var(--radius-lg, 12px);
+      padding: var(--spacing-5, 20px);
+      box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+    }
+    .bp-dialog-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: var(--spacing-3, 12px);
+    }
+    .bp-dialog-title {
+      font-size: var(--typography-size-lg, 18px);
+      font-weight: 600;
+      color: var(--color-text-primary);
+    }
+    .bp-dialog-footer {
+      display: flex;
+      justify-content: flex-end;
+      gap: var(--spacing-2, 8px);
+      margin-top: var(--spacing-5, 20px);
+    }
+    /* Toast Primitives */
+    .bp-toast {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background-color: var(--color-surface-elevated);
+      border: 1px solid var(--color-neutral-border);
+      border-left: 4px solid var(--color-primary-base);
+      border-radius: var(--radius-md, 8px);
+      padding: var(--spacing-3, 12px) var(--spacing-4, 16px);
+      box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+    }
+    .bp-toast-content {
+      display: flex;
+      align-items: center;
+      gap: var(--spacing-3, 12px);
+    }
+    .bp-toast-title {
+      font-weight: 600;
+      font-size: var(--typography-size-sm, 14px);
+      color: var(--color-text-primary);
+    }
+    .bp-toast-desc {
+      font-size: var(--typography-size-xs, 12px);
+      color: var(--color-text-secondary);
+    }
+  </style>
+</head>
+<body>
+  <div class="preview-container">
+    <!-- Header & Brand Theme Switcher -->
+    <header class="preview-header">
+      <div>
+        <h1 style="font-size: 24px; font-weight: 700; color: var(--color-primary-base);">Blue-Patterns-UI</h1>
+        <p style="font-size: 13px; color: var(--color-text-secondary);">Phase 1 Verification Matrix (Light/Dark & Multi-Theme AA Audit)</p>
+      </div>
+      <nav class="theme-controls" aria-label="Theme selection">
+        <button type="button" class="bp-button bp-button-outline-neutral" id="btn-default" onclick="switchTheme('default')">Default</button>
+        <button type="button" class="bp-button bp-button-outline-neutral" id="btn-obsidian" onclick="switchTheme('obsidian')">Obsidian</button>
+        <button type="button" class="bp-button bp-button-outline-neutral" id="btn-enterprise" onclick="switchTheme('enterprise')">Enterprise</button>
+        <button type="button" class="bp-button bp-button-solid-primary" id="btn-mode" onclick="toggleMode()">Toggle Dark/Light</button>
+      </nav>
+    </header>
+
+    <!-- Interactive Component Showcases -->
+    <main class="preview-grid">
+      <!-- 1. Button Suite -->
+      <section class="preview-card" aria-labelledby="sec-buttons">
+        <h2 id="sec-buttons" class="preview-card-title">1. Button Primitives</h2>
+        <div style="display: flex; flex-wrap: wrap; gap: var(--spacing-3, 12px);">
+          <button type="button" class="bp-button bp-button-solid-primary">Solid Primary</button>
+          <button type="button" class="bp-button bp-button-outline-neutral">Outline Neutral</button>
+          <button type="button" class="bp-button bp-button-soft-info">Soft Info</button>
+          <button type="button" class="bp-button bp-button-solid-primary bp-button-disabled" disabled aria-disabled="true">Disabled</button>
+        </div>
+      </section>
+
+      <!-- 2. Toast Notification -->
+      <section class="preview-card" aria-labelledby="sec-toast">
+        <h2 id="sec-toast" class="preview-card-title">2. Toast Notification</h2>
+        <div role="status" aria-live="polite" class="bp-toast">
+          <div class="bp-toast-content">
+            <span style="color: var(--color-primary-base); font-size: 18px;" aria-hidden="true">✔</span>
+            <div>
+              <p class="bp-toast-title">Theme Pack Applied</p>
+              <p class="bp-toast-desc">Zero-runtime CSS tokens active with 0 AA contrast violations.</p>
+            </div>
+          </div>
+          <button type="button" class="bp-button bp-button-outline-neutral" style="padding: 4px 8px; font-size: 11px;" aria-label="Dismiss toast">Dismiss</button>
+        </div>
+      </section>
+
+      <!-- 3. Tabs with Shared Layout Motion Indicator -->
+      <section class="preview-card" aria-labelledby="sec-tabs">
+        <h2 id="sec-tabs" class="preview-card-title">3. Tabs & Micro-Interaction</h2>
+        <div>
+          <div role="tablist" class="bp-tablist" aria-label="Project tabs">
+            <div class="bp-tab-indicator" id="tab-indicator" aria-hidden="true"></div>
+            <button role="tab" id="tab-1" aria-selected="true" aria-controls="panel-1" class="bp-tab" onclick="selectTab(0)">Overview</button>
+            <button role="tab" id="tab-2" aria-selected="false" aria-controls="panel-2" class="bp-tab" onclick="selectTab(1)">Analytics</button>
+            <button role="tab" id="tab-3" aria-selected="false" aria-controls="panel-3" class="bp-tab" onclick="selectTab(2)">Settings</button>
+          </div>
+          <div role="tabpanel" id="panel-1" aria-labelledby="tab-1" class="bp-tabpanel">
+            <p>Overview dashboard initialized with zero-build-plugin React 19 architecture.</p>
+          </div>
+          <div role="tabpanel" id="panel-2" aria-labelledby="tab-2" class="bp-tabpanel" hidden>
+            <p>High-performance data visualization telemetry and streaming metrics.</p>
+          </div>
+          <div role="tabpanel" id="panel-3" aria-labelledby="tab-3" class="bp-tabpanel" hidden>
+            <p>Configure theme tokens and reduced-motion preferences.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- 4. Modal Dialog Component -->
+      <section class="preview-card" aria-labelledby="sec-dialog">
+        <h2 id="sec-dialog" class="preview-card-title">4. Modal Dialog</h2>
+        <div role="dialog" aria-modal="true" aria-labelledby="dialog-title" class="bp-dialog-overlay">
+          <div class="bp-dialog-header">
+            <h3 id="dialog-title" class="bp-dialog-title">Confirm Deployment</h3>
+            <button type="button" class="bp-button bp-button-outline-neutral" style="padding: 2px 8px;" aria-label="Close dialog">✕</button>
+          </div>
+          <p style="font-size: var(--typography-size-sm, 14px); color: var(--color-text-secondary); line-height: 1.5;">
+            Deploying Blue-Patterns-UI Phase 1 to production. All static CSS bundles and contracts are verified.
+          </p>
+          <div class="bp-dialog-footer">
+            <button type="button" class="bp-button bp-button-outline-neutral">Cancel</button>
+            <button type="button" class="bp-button bp-button-solid-primary">Confirm</button>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!-- 5. Stabilized BarChart Section -->
+    <section class="preview-card" aria-labelledby="sec-chart">
+      <h2 id="sec-chart" class="preview-card-title">5. Stabilized BarChart (Tokens: --color-chart-1 through --color-chart-8)</h2>
+      <div style="width: 100%; overflow-x: auto;">
+        <svg viewBox="0 0 700 200" role="region" aria-label="Weekly performance bar chart" style="width: 100%; height: auto;">
+          <!-- Axis Line -->
+          <line x1="40" y1="160" x2="680" y2="160" stroke="var(--color-neutral-border)" stroke-width="1" />
+          <!-- Bars -->
+          <g>
+            <rect x="60" y="40" width="48" height="120" rx="3" fill="var(--color-chart-1)" role="graphics-symbol" aria-label="Mon: 85" />
+            <text x="84" y="180" text-anchor="middle" font-size="12" fill="var(--color-text-secondary)">Mon</text>
+          </g>
+          <g>
+            <rect x="140" y="70" width="48" height="90" rx="3" fill="var(--color-chart-2)" role="graphics-symbol" aria-label="Tue: 65" />
+            <text x="164" y="180" text-anchor="middle" font-size="12" fill="var(--color-text-secondary)">Tue</text>
+          </g>
+          <g>
+            <rect x="220" y="25" width="48" height="135" rx="3" fill="var(--color-chart-3)" role="graphics-symbol" aria-label="Wed: 95" />
+            <text x="244" y="180" text-anchor="middle" font-size="12" fill="var(--color-text-secondary)">Wed</text>
+          </g>
+          <g>
+            <rect x="300" y="55" width="48" height="105" rx="3" fill="var(--color-chart-4)" role="graphics-symbol" aria-label="Thu: 75" />
+            <text x="324" y="180" text-anchor="middle" font-size="12" fill="var(--color-text-secondary)">Thu</text>
+          </g>
+          <g>
+            <rect x="380" y="80" width="48" height="80" rx="3" fill="var(--color-chart-5)" role="graphics-symbol" aria-label="Fri: 55" />
+            <text x="404" y="180" text-anchor="middle" font-size="12" fill="var(--color-text-secondary)">Fri</text>
+          </g>
+          <g>
+            <rect x="460" y="50" width="48" height="110" rx="3" fill="var(--color-chart-6)" role="graphics-symbol" aria-label="Sat: 78" />
+            <text x="484" y="180" text-anchor="middle" font-size="12" fill="var(--color-text-secondary)">Sat</text>
+          </g>
+          <g>
+            <rect x="540" y="30" width="48" height="130" rx="3" fill="var(--color-chart-7)" role="graphics-symbol" aria-label="Sun: 92" />
+            <text x="564" y="180" text-anchor="middle" font-size="12" fill="var(--color-text-secondary)">Sun</text>
+          </g>
+          <g>
+            <rect x="620" y="20" width="48" height="140" rx="3" fill="var(--color-chart-8)" role="graphics-symbol" aria-label="Total: 100" />
+            <text x="644" y="180" text-anchor="middle" font-size="12" fill="var(--color-text-secondary)">Avg</text>
+          </g>
+        </svg>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    function switchTheme(name) {
+      document.documentElement.setAttribute('data-theme', name);
+      const link = document.getElementById('theme-link');
+      link.href = `../packages/themes/theme-${name}.css`;
+    }
+
+    function toggleMode() {
+      const current = document.documentElement.style.colorScheme;
+      const next = current === 'dark' ? 'light' : 'dark';
+      document.documentElement.style.colorScheme = next;
+    }
+
+    function selectTab(index) {
+      const tabs = document.querySelectorAll('.bp-tab');
+      const panels = document.querySelectorAll('.bp-tabpanel');
+      const indicator = document.getElementById('tab-indicator');
+      
+      tabs.forEach((tab, i) => {
+        const isSel = i === index;
+        tab.setAttribute('aria-selected', isSel ? 'true' : 'false');
+        panels[i].hidden = !isSel;
+      });
+
+      indicator.style.transform = `translateX(${index * 96}px)`;
+    }
+  </script>
+</body>
+</html>
