@@ -8,6 +8,11 @@
   "publishConfig": {
     "access": "public"
   },
+  "files": [
+    "dist",
+    "bin",
+    "README.md"
+  ],
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "bin": {

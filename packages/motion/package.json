@@ -23,7 +23,9 @@
   "files": [
     "dist",
     "motion.css",
-    "README.md"
+    "README.md",
+    "!**/*.test.*",
+    "!**/__tests__/**"
   ],
   "sideEffects": [
     "**/*.css"

@@ -8,6 +8,10 @@
   "publishConfig": {
     "access": "public"
   },
+  "files": [
+    "*.css",
+    "README.md"
+  ],
   "exports": {
     "./theme-default.css": "./theme-default.css",
     "./theme-obsidian.css": "./theme-obsidian.css",
