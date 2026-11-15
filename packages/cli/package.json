@@ -85,6 +85,7 @@
     }
   },
   "files": [
+    "bin",
     "clients",
     "api",
     "assets",
