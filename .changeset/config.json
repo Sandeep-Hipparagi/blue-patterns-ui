@@ -31,7 +31,14 @@
     "@blue-patterns/lab",
     "@blue-patterns/native",
     "@blue-patterns/vega",
-    "@blue-patterns/theme-probe"
+    "@blue-patterns/theme-probe",
+    "@blue-patterns/theme-butter",
+    "@blue-patterns/theme-chocolate",
+    "@blue-patterns/theme-gothic",
+    "@blue-patterns/theme-matcha",
+    "@blue-patterns/theme-neutral",
+    "@blue-patterns/theme-stone",
+    "@blue-patterns/theme-y2k"
   ],
   "bumpVersionsWithWorkspaceProtocolOnly": true
 }

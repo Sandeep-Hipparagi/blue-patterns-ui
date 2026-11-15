@@ -1,6 +1,6 @@
 {
   "name": "@blue-patterns/motion",
-  "version": "0.1.0",
+  "version": "0.7.18",
   "description": "Zero-dependency spring physics, WAAPI micro-interactions, and View Transitions for Blue-Patterns-UI",
   "author": "Blue-Patterns-UI Contributors",
   "license": "MIT",

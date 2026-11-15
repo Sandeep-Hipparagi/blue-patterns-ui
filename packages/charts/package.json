@@ -1,6 +1,6 @@
 {
   "name": "@blue-patterns/charts",
-  "version": "0.1.9",
+  "version": "0.7.18",
   "description": "Tokenized, accessible SVG & Canvas data visualization library for Blue-Patterns-UI",
   "author": "Blue-Patterns-UI Contributors",
   "license": "MIT",
@@ -73,7 +73,7 @@
   },
   "peerDependencies": {
     "@stylexjs/stylex": ">=0.10.0",
-    "@blue-patterns/core": "0.7.17",
+    "@blue-patterns/core": "0.7.18",
     "react": ">=19.0.0",
     "react-dom": ">=19.0.0"
   },

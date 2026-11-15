@@ -1,6 +1,6 @@
 {
   "name": "@blue-patterns/cli",
-  "version": "0.7.17",
+  "version": "0.7.18",
   "displayName": "CLI",
   "description": "Scaffold projects, browse templates, generate themes, and get agent-ready docs from the command line.",
   "author": "Meta Open Source",

@@ -1,6 +1,6 @@
 {
   "name": "@blue-patterns/mcp",
-  "version": "0.1.0",
+  "version": "0.7.18",
   "description": "Deterministic Model Context Protocol (MCP) server exposing Blue-Patterns-UI contracts, validation, and search to AI coding agents",
   "author": "Blue-Patterns-UI Contributors",
   "license": "MIT",

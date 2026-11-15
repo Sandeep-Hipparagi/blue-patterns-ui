@@ -803,7 +803,7 @@ importers:
   packages/charts:
     dependencies:
       '@blue-patterns/core':
-        specifier: 0.7.17
+        specifier: 0.7.18
         version: link:../core
       '@stylexjs/stylex':
         specifier: '>=0.10.0'
@@ -1007,7 +1007,7 @@ importers:
   packages/lab:
     dependencies:
       '@blue-patterns/core':
-        specifier: 0.7.17
+        specifier: 0.7.18
         version: link:../core
       '@stylexjs/stylex':
         specifier: '>=0.10.0'
@@ -1095,7 +1095,7 @@ importers:
   packages/richtext:
     dependencies:
       '@blue-patterns/core':
-        specifier: 0.7.17
+        specifier: 0.7.18
         version: link:../core
       '@stylexjs/stylex':
         specifier: '>=0.10.0'
@@ -1176,7 +1176,7 @@ importers:
   packages/themes/butter:
     dependencies:
       '@blue-patterns/core':
-        specifier: 0.7.17
+        specifier: 0.7.18
         version: link:../../core
       lucide-react:
         specifier: ^1.66.0
@@ -1186,13 +1186,13 @@ importers:
         version: 19.3.1
     devDependencies:
       '@blue-patterns/cli':
-        specifier: 0.7.17
+        specifier: 0.7.18
         version: link:../../cli
 
   packages/themes/chocolate:
     dependencies:
       '@blue-patterns/core':
-        specifier: 0.7.17
+        specifier: 0.7.18
         version: link:../../core
       lucide-react:
         specifier: ^1.66.0
@@ -1202,13 +1202,13 @@ importers:
         version: 19.3.1
     devDependencies:
       '@blue-patterns/cli':
-        specifier: 0.7.17
+        specifier: 0.7.18
         version: link:../../cli
 
   packages/themes/gothic:
     dependencies:
       '@blue-patterns/core':
-        specifier: 0.7.17
+        specifier: 0.7.18
         version: link:../../core
       lucide-react:
         specifier: ^1.66.0
@@ -1218,13 +1218,13 @@ importers:
         version: 19.3.1
     devDependencies:
       '@blue-patterns/cli':
-        specifier: 0.7.17
+        specifier: 0.7.18
         version: link:../../cli
 
   packages/themes/matcha:
     dependencies:
       '@blue-patterns/core':
-        specifier: 0.7.17
+        specifier: 0.7.18
         version: link:../../core
       lucide-react:
         specifier: ^1.66.0
@@ -1234,13 +1234,13 @@ importers:
         version: 19.3.1
     devDependencies:
       '@blue-patterns/cli':
-        specifier: 0.7.17
+        specifier: 0.7.18
         version: link:../../cli
 
   packages/themes/neutral:
     dependencies:
       '@blue-patterns/core':
-        specifier: 0.7.17
+        specifier: 0.7.18
         version: link:../../core
       lucide-react:
         specifier: ^1.66.0
@@ -1250,20 +1250,20 @@ importers:
         version: 19.3.1
     devDependencies:
       '@blue-patterns/cli':
-        specifier: 0.7.17
+        specifier: 0.7.18
         version: link:../../cli
 
   packages/themes/probe:
     dependencies:
       '@blue-patterns/core':
-        specifier: 0.7.17
+        specifier: 0.7.18
         version: link:../../core
       react:
         specifier: '>=19'
         version: 19.3.1
     devDependencies:
       '@blue-patterns/cli':
-        specifier: 0.7.17
+        specifier: 0.7.18
         version: link:../../cli
       tsup:
         specifier: ^8.3.0
@@ -1272,7 +1272,7 @@ importers:
   packages/themes/stone:
     dependencies:
       '@blue-patterns/core':
-        specifier: 0.7.17
+        specifier: 0.7.18
         version: link:../../core
       lucide-react:
         specifier: ^1.66.0
@@ -1282,13 +1282,13 @@ importers:
         version: 19.3.1
     devDependencies:
       '@blue-patterns/cli':
-        specifier: 0.7.17
+        specifier: 0.7.18
         version: link:../../cli
 
   packages/themes/y2k:
     dependencies:
       '@blue-patterns/core':
-        specifier: 0.7.17
+        specifier: 0.7.18
         version: link:../../core
       lucide-react:
         specifier: ^1.66.0
@@ -1298,7 +1298,7 @@ importers:
         version: 19.3.1
     devDependencies:
       '@blue-patterns/cli':
-        specifier: 0.7.17
+        specifier: 0.7.18
         version: link:../../cli
 
   packages/vega:
