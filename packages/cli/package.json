@@ -1,6 +1,6 @@
 {
   "name": "@blue-patterns/cli",
-  "version": "0.7.18",
+  "version": "0.7.19",
   "displayName": "CLI",
   "description": "Scaffold projects, browse templates, generate themes, and get agent-ready docs from the command line.",
   "author": "Meta Open Source",
@@ -29,9 +29,10 @@
     "node": ">=22.13.0"
   },
   "bin": {
-    "astryx": "./clients/cli/bin/astryx.mjs",
-    "cli": "./clients/cli/bin/astryx.mjs",
-    "blue-patterns": "./bin/cli.js"
+    "blue-patterns": "bin/cli.js",
+    "blue-patterns-cli": "bin/cli.js",
+    "astryx": "clients/cli/bin/astryx.mjs",
+    "cli": "bin/cli.js"
   },
   "exports": {
     ".": "./clients/cli/bin/astryx.mjs",
@@ -131,7 +132,7 @@
     "@babel/plugin-transform-typescript": "7.29.7",
     "@babel/types": "7.29.8",
     "@csstools/css-syntax-patches-for-csstree": "1.1.6",
-    "@stylexjs/babel-plugin": "catalog:",
+    "@stylexjs/babel-plugin": "^0.19.1",
     "ast-types": "0.16.3",
     "commander": "^12.1.0",
     "css-tree": "3.2.1",
@@ -160,7 +161,7 @@
     "@blue-patterns/lab": "*",
     "@blue-patterns/theme-neutral": "*",
     "@heroicons/react": "^2.2.0",
-    "@stylexjs/stylex": "catalog:",
+    "@stylexjs/stylex": "^0.19.1",
     "@types/babel__core": "^7.20.5",
     "lucide-react": "^1.66.0",
     "recharts": "^3.10.1"
