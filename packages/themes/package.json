@@ -21,5 +21,14 @@
   },
   "sideEffects": [
     "**/*.css"
-  ]
+  ],
+  "homepage": "https://github.com/Sandeep-Hipparagi/blue-patterns-ui#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Sandeep-Hipparagi/blue-patterns-ui.git",
+    "directory": "packages/themes"
+  },
+  "bugs": {
+    "url": "https://github.com/Sandeep-Hipparagi/blue-patterns-ui/issues"
+  }
 }

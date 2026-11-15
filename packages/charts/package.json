@@ -7,14 +7,14 @@
   "publishConfig": {
     "access": "public"
   },
-  "homepage": "https://github.com/meta/astryx#readme",
+  "homepage": "https://github.com/Sandeep-Hipparagi/blue-patterns-ui#readme",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/meta/astryx.git",
+    "url": "git+https://github.com/Sandeep-Hipparagi/blue-patterns-ui.git",
     "directory": "packages/charts"
   },
   "bugs": {
-    "url": "https://github.com/meta/astryx/issues"
+    "url": "https://github.com/Sandeep-Hipparagi/blue-patterns-ui/issues"
   },
   "keywords": [
     "astryx",

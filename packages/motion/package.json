@@ -36,5 +36,14 @@
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc --noEmit",
     "test": "vitest run"
+  },
+  "homepage": "https://github.com/Sandeep-Hipparagi/blue-patterns-ui#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Sandeep-Hipparagi/blue-patterns-ui.git",
+    "directory": "packages/motion"
+  },
+  "bugs": {
+    "url": "https://github.com/Sandeep-Hipparagi/blue-patterns-ui/issues"
   }
 }

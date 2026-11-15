@@ -11,7 +11,7 @@ import * as path from 'node:path';
 import ts from 'typescript';
 
 export const DEFAULT_REMOTE_REGISTRY =
-  'https://raw.githubusercontent.com/BluePatterns-AI/blue-patterns-studio/main/public/registry.json';
+  'https://raw.githubusercontent.com/Sandeep-Hipparagi/blue-patterns-studio/main/public/registry.json';
 
 /**
  * AST Validation for JSX/TSX conforming to Blue-Patterns-UI design system invariants.

@@ -88,6 +88,14 @@ const studioPackageJson = {
   ],
   author: 'Blue-Patterns-UI Contributors',
   license: 'MIT',
+  homepage: 'https://github.com/Sandeep-Hipparagi/blue-patterns-studio#readme',
+  repository: {
+    type: 'git',
+    url: 'git+https://github.com/Sandeep-Hipparagi/blue-patterns-studio.git',
+  },
+  bugs: {
+    url: 'https://github.com/Sandeep-Hipparagi/blue-patterns-studio/issues',
+  },
 };
 fs.writeFileSync(
   path.join(targetDir, 'package.json'),

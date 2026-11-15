@@ -5,14 +5,14 @@
   "description": "Scaffold projects, browse templates, generate themes, and get agent-ready docs from the command line.",
   "author": "Meta Open Source",
   "license": "MIT",
-  "homepage": "https://github.com/meta/astryx#readme",
+  "homepage": "https://github.com/Sandeep-Hipparagi/blue-patterns-ui#readme",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/meta/astryx.git",
+    "url": "git+https://github.com/Sandeep-Hipparagi/blue-patterns-ui.git",
     "directory": "packages/cli"
   },
   "bugs": {
-    "url": "https://github.com/meta/astryx/issues"
+    "url": "https://github.com/Sandeep-Hipparagi/blue-patterns-ui/issues"
   },
   "keywords": [
     "astryx",

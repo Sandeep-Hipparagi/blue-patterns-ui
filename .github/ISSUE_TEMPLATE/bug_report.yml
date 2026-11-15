@@ -7,7 +7,7 @@ body:
     attributes:
       value: |
         Thank you for reporting an issue in **Blue-Patterns-UI**!
-        Please ensure you have checked the [Forbidden Patterns checklist](https://github.com/BluePatterns-AI/blue-patterns-ui/blob/main/AGENTS.md) and searched existing issues before submitting.
+        Please ensure you have checked the [Forbidden Patterns checklist](https://github.com/Sandeep-Hipparagi/blue-patterns-ui/blob/main/AGENTS.md) and searched existing issues before submitting.
   - type: dropdown
     id: package
     attributes:
