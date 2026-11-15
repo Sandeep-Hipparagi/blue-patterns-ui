@@ -64,12 +64,12 @@ const studioPackageJson = {
     typecheck: 'tsc --noEmit',
   },
   dependencies: {
-    '@blue-patterns/core': '^0.7.17',
-    '@blue-patterns/motion': '^0.1.0',
-    '@blue-patterns/charts': '^0.1.9',
-    '@blue-patterns/themes': '^0.1.0',
-    '@blue-patterns/cli': '^0.7.17',
-    '@blue-patterns/mcp': '^0.1.0',
+    '@blue-patterns/core': '^0.7.18',
+    '@blue-patterns/motion': '^0.7.18',
+    '@blue-patterns/charts': '^0.7.18',
+    '@blue-patterns/themes': '^0.7.18',
+    '@blue-patterns/cli': '^0.7.19',
+    '@blue-patterns/mcp': '^0.7.18',
     react: '^19.0.0',
     'react-dom': '^19.0.0',
   },
@@ -241,7 +241,10 @@ fs.writeFileSync(
 console.log('📝 Writing README.md, LICENSE, and CONTRIBUTING.md...');
 const studioReadme = `# Blue-Patterns Studio 🎨
 
-> **The Interactive Token & Motion Customizer, Live Component Matrix, and Template Registry for Blue-Patterns-UI**
+> **The Interactive Token & Motion Customizer, Live Component Matrix, and Template Registry for Blue-Patterns-UI**  
+> 🌐 **Live App:** [sandeep-hipparagi.github.io/blue-patterns-studio](https://sandeep-hipparagi.github.io/blue-patterns-studio/)  
+> 📦 **Registry Endpoint:** [sandeep-hipparagi.github.io/blue-patterns-studio/registry.json](https://sandeep-hipparagi.github.io/blue-patterns-studio/registry.json)  
+> 🏛️ **Core Monorepo:** [github.com/Sandeep-Hipparagi/blue-patterns-ui](https://github.com/Sandeep-Hipparagi/blue-patterns-ui)
 
 Blue-Patterns Studio is a 100% dogfooded React 19 application demonstrating the power of zero-runtime CSS, WAAPI spring physics, and CSS custom property tokenization.
 
