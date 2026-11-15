@@ -85,7 +85,7 @@
     "react": ">=19"
   },
   "devDependencies": {
-    "@blue-patterns/cli": "0.7.18"
+    "@blue-patterns/cli": "*"
   },
   "module": "./dist/source.mjs"
 }
