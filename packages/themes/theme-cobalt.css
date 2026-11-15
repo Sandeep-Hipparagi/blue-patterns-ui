@@ -1,0 +1,81 @@
+/**
+ * Blue-Patterns-UI Theme: Cobalt (Crisp Fintech Blue & Slate Hierarchy)
+ */
+
+:root, [data-theme="cobalt"] {
+  color-scheme: light dark;
+
+  /* Surfaces & Canvas */
+  --color-surface-base: light-dark(#f8fafc, #0a0f1d);
+  --color-surface-subtle: light-dark(#f1f5f9, #111827);
+  --color-surface-elevated: light-dark(#ffffff, #1e293b);
+  --color-surface-sunken: light-dark(#e2e8f0, #030712);
+
+  /* Text & Foreground */
+  --color-text-primary: light-dark(#020617, #f8fafc);
+  --color-text-secondary: light-dark(#334155, #94a3b8);
+  --color-text-muted: light-dark(#64748b, #64748b);
+  --color-text-inverted: light-dark(#ffffff, #020617);
+
+  /* Primary Brand Intent: Deep Cobalt Blue */
+  --color-primary-base: light-dark(#1d4ed8, #3b82f6);
+  --color-primary-hover: light-dark(#1e40af, #60a5fa);
+  --color-primary-active: light-dark(#172554, #93c5fd);
+  --color-primary-subtle: light-dark(#dbeafe, #172554);
+  --color-primary-contrast: light-dark(#ffffff, #ffffff);
+
+  /* Neutral Tone: Cool Slate */
+  --color-neutral-base: light-dark(#64748b, #94a3b8);
+  --color-neutral-subtle: light-dark(#f1f5f9, #1e293b);
+  --color-neutral-border: light-dark(#cbd5e1, #334155);
+  --color-neutral-contrast: light-dark(#ffffff, #020617);
+
+  /* Semantic Feedback */
+  --color-success-base: light-dark(#16a34a, #22c55e);
+  --color-success-subtle: light-dark(#dcfce7, #14532d);
+  --color-warning-base: light-dark(#d97706, #f59e0b);
+  --color-warning-subtle: light-dark(#fef3c7, #78350f);
+  --color-danger-base: light-dark(#dc2626, #ef4444);
+  --color-danger-subtle: light-dark(#fee2e2, #7f1d1d);
+  --color-info-base: light-dark(#2563eb, #3b82f6);
+  --color-info-subtle: light-dark(#dbeafe, #1e3a8a);
+
+  /* Spacing */
+  --spacing-0: 0px;
+  --spacing-1: 4px;
+  --spacing-2: 8px;
+  --spacing-3: 12px;
+  --spacing-4: 16px;
+  --spacing-5: 20px;
+  --spacing-6: 24px;
+  --spacing-8: 32px;
+  --spacing-10: 40px;
+  --spacing-12: 48px;
+
+  /* Modern Sharp Radii */
+  --radius-xs: 2px;
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --radius-xl: 12px;
+  --radius-full: 9999px;
+
+  /* Typography */
+  --typography-font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --typography-font-mono: 'JetBrains Mono', 'Roboto Mono', monospace;
+  --typography-size-xs: 0.75rem;
+  --typography-size-sm: 0.875rem;
+  --typography-size-md: 1rem;
+  --typography-size-lg: 1.125rem;
+  --typography-size-xl: 1.25rem;
+
+  /* High Accuracy Fintech Charts */
+  --color-chart-1: light-dark(#1d4ed8, #3b82f6);
+  --color-chart-2: light-dark(#0284c7, #38bdf8);
+  --color-chart-3: light-dark(#059669, #10b981);
+  --color-chart-4: light-dark(#d97706, #f59e0b);
+  --color-chart-5: light-dark(#7c3aed, #8b5cf6);
+  --color-chart-6: light-dark(#e11d48, #f43f5e);
+  --color-chart-7: light-dark(#0891b2, #06b6d4);
+  --color-chart-8: light-dark(#475569, #94a3b8);
+}

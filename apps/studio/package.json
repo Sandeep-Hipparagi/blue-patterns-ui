@@ -1,0 +1,30 @@
+{
+  "name": "@blue-patterns/studio",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit",
+    "build:registry": "node scripts/build-registry.mjs"
+  },
+  "dependencies": {
+    "@blue-patterns/core": "workspace:*",
+    "@blue-patterns/motion": "workspace:*",
+    "@blue-patterns/charts": "workspace:*",
+    "@blue-patterns/themes": "workspace:*",
+    "@blue-patterns/cli": "workspace:*",
+    "@blue-patterns/mcp": "workspace:*",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1"
+  },
+  "devDependencies": {
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@vitejs/plugin-react": "^5.2.0",
+    "typescript": "^6.0.3",
+    "vite": "^8.1.3"
+  }
+}

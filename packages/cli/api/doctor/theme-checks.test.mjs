@@ -1,0 +1,1696 @@
+// Copyright (c) Meta Platforms, Inc. and affiliates.
+
+/** @file Fault-injection coverage for all ten app-theme doctor checks. */
+
+import {afterEach, describe, expect, it} from 'vitest';
+import * as fs from 'node:fs';
+import * as os from 'node:os';
+import * as path from 'node:path';
+import {spawnSync} from 'node:child_process';
+import {
+  checkAppThemes,
+  checkThemes,
+  themeImportWiring,
+} from './theme-checks.mjs';
+import {runChecks} from './doctor.mjs';
+import {themeAdd} from '../theme/add/add.mjs';
+import {themeEject} from '../theme/eject/eject.mjs';
+import {themeBuild} from '../theme/build/build.mjs';
+import {parseThemeModuleRecord} from '../../foundation/config/theme-state.mjs';
+import {CLI_VERSION} from '../../test-utils/release-fixtures.mjs';
+import {globalCli} from '../../test-utils/global-local-fixtures.mjs';
+
+/** @type {string[]} */
+const dirs = [];
+const REPO_ROOT = path.resolve(import.meta.dirname, '../../../..');
+
+/** @param {string} file @param {string} content */
+function write(file, content) {
+  fs.mkdirSync(path.dirname(file), {recursive: true});
+  fs.writeFileSync(file, content);
+}
+
+/**
+ * @param {Array<{slug: string, css?: string, fontFamily?: string, fontCss?: string}>} themeSpecs
+ * @param {{peerRange?: string, importModule?: boolean, root?: string}} [options]
+ *   `root`: the folder the fixture is made in (default: this package)
+ */
+async function fixture(themeSpecs = [{slug: 'ocean'}], options = {}) {
+  const dir = fs.mkdtempSync(
+    path.join(options.root ?? REPO_ROOT, '.astryx-doctor-themes-'),
+  );
+  dirs.push(dir);
+  fs.mkdirSync(path.join(dir, 'src'), {recursive: true});
+  write(path.join(dir, 'tsconfig.json'), '{}\n');
+  write(
+    path.join(dir, 'package.json'),
+    JSON.stringify({
+      name: 'doctor-app',
+      private: true,
+      dependencies: {
+        '@acme/themes': '1.0.0',
+        '@blue-patterns/core': '1.0.0',
+      },
+    }),
+  );
+  write(
+    path.join(dir, 'node_modules/@blue-patterns/core/package.json'),
+    JSON.stringify({name: '@blue-patterns/core', version: CLI_VERSION}),
+  );
+
+  const packageDir = path.join(dir, 'node_modules/@acme/themes');
+  const exportsMap = {};
+  for (const spec of themeSpecs) {
+    exportsMap[`./themes/${spec.slug}`] = `./dist/${spec.slug}.js`;
+    exportsMap[`./themes/${spec.slug}.css`] = `./dist/${spec.slug}.css`;
+    if (spec.fontCss != null) {
+      exportsMap[`./themes/${spec.slug}.fonts.css`] =
+        `./dist/${spec.slug}.fonts.css`;
+    }
+  }
+  write(
+    path.join(packageDir, 'package.json'),
+    JSON.stringify({
+      name: '@acme/themes',
+      version: '1.0.0',
+      type: 'module',
+      peerDependencies: {
+        '@blue-patterns/core': options.peerRange ?? `^${CLI_VERSION}`,
+      },
+      exports: exportsMap,
+    }),
+  );
+  write(
+    path.join(packageDir, 'astryx.integration.mjs'),
+    "export default {themes: './themes'};\n",
+  );
+
+  for (const spec of themeSpecs) {
+    const exportName = spec.exportName ?? `${spec.slug}Theme`;
+    const sourceDir = path.join(packageDir, 'themes', spec.slug);
+    const fontProperty = spec.fontFamily
+      ? `, fontFamily: ${JSON.stringify(spec.fontFamily)}`
+      : '';
+    write(
+      path.join(sourceDir, `${exportName}.doc.mjs`),
+      `/** @type {import('@blue-patterns/cli/authoring').ThemeDoc} */\nexport default {type: 'theme', name: '${spec.slug}', displayName: '${spec.slug}', description: '${spec.slug} theme.', maintained: true};\n`,
+    );
+    write(
+      path.join(sourceDir, `${exportName}.ts`),
+      `export const ${exportName} = {name: '${spec.slug}', tokens: {}${fontProperty}};\n`,
+    );
+    write(
+      path.join(packageDir, `dist/${spec.slug}.js`),
+      `export const ${exportName} = {name: '${spec.slug}', tokens: {}${fontProperty}};\n`,
+    );
+    write(
+      path.join(packageDir, `dist/${spec.slug}.css`),
+      spec.css ??
+        `[data-astryx-theme="${spec.slug}"] { --color-text: black; }\n`,
+    );
+    if (spec.fontCss != null) {
+      write(path.join(packageDir, `dist/${spec.slug}.fonts.css`), spec.fontCss);
+    }
+    await themeAdd(spec.slug, {
+      cwd: dir,
+      import: true,
+      package: '@acme/themes',
+    });
+  }
+
+  if (options.importModule !== false) {
+    write(
+      path.join(dir, 'src/index.tsx'),
+      "import {themes, defaultThemeSlug} from './astryx-themes';\nvoid themes[defaultThemeSlug];\n",
+    );
+  }
+  return {dir, packageDir, moduleFile: path.join(dir, 'src/astryx-themes.ts')};
+}
+
+/** @param {Awaited<ReturnType<typeof checkAppThemes>>} checks @param {string} id */
+function check(checks, id) {
+  const result = checks.find(item => item.id === id);
+  if (!result) throw new Error(`Missing doctor check ${id}`);
+  return result;
+}
+
+/** @param {string} dir */
+function runDoctor(dir) {
+  return spawnSync(
+    process.execPath,
+    [path.join(REPO_ROOT, 'packages/cli/clients/cli/bin/astryx.mjs'), 'doctor'],
+    {cwd: dir, encoding: 'utf-8', timeout: 30_000},
+  );
+}
+
+afterEach(() => {
+  while (dirs.length > 0) {
+    fs.rmSync(dirs.pop(), {recursive: true, force: true});
+  }
+});
+
+describe('the released themes check', () => {
+  /** @param {string} name */
+  function emptyApp(name) {
+    const dir = fs.mkdtempSync(path.join(REPO_ROOT, `.astryx-doctor-${name}-`));
+    dirs.push(dir);
+    write(path.join(dir, 'package.json'), '{"name":"app","private":true}\n');
+    return dir;
+  }
+
+  /** @param {string} dir @param {string} slug */
+  function installThemePackage(dir, slug) {
+    write(
+      path.join(
+        dir,
+        'node_modules/@blue-patterns',
+        `theme-${slug}`,
+        'package.json',
+      ),
+      JSON.stringify({name: `@blue-patterns/theme-${slug}`, version: '1.0.0'}),
+    );
+  }
+
+  it('keeps its released id, label, fields, and statuses without a generated theme module', async () => {
+    const dir = emptyApp('themes-none');
+    expect(checkThemes(dir, await checkAppThemes(dir))).toEqual({
+      id: 'themes',
+      label: 'Theme packages',
+      status: 'warn',
+      message: 'No @blue-patterns/theme-* packages are installed.',
+      fix: expect.stringContaining('theme add neutral`.'),
+    });
+
+    installThemePackage(dir, 'neutral');
+    const unwired = checkThemes(dir, await checkAppThemes(dir));
+    expect(unwired).toEqual({
+      id: 'themes',
+      label: 'Theme packages',
+      status: 'warn',
+      message:
+        'Theme package(s) installed (@blue-patterns/theme-neutral) but no theme appears wired.',
+      fix: expect.stringContaining('theme add <slug>`.'),
+    });
+    expect(unwired.fix).not.toContain('ASTRYX_THEME');
+
+    write(
+      path.join(dir, 'package.json'),
+      JSON.stringify({
+        name: 'app',
+        private: true,
+        astryx: {theme: '@blue-patterns/theme-neutral'},
+      }),
+    );
+    expect(checkThemes(dir, await checkAppThemes(dir))).toEqual({
+      id: 'themes',
+      label: 'Theme packages',
+      status: 'pass',
+      message:
+        'Theme package(s) installed (@blue-patterns/theme-neutral); wired via package.json astryx.theme.',
+    });
+  });
+
+  it('reports the overall result of the app-theme checks with a generated module', async () => {
+    const healthy = await fixture();
+    expect(checkThemes(healthy.dir, await checkAppThemes(healthy.dir))).toEqual(
+      {
+        id: 'themes',
+        label: 'Theme packages',
+        status: 'pass',
+        message:
+          'App themes come from the generated theme module, and every theme check passes.',
+      },
+    );
+
+    // A module is loaded once per process, so the broken one is a new fixture.
+    const {dir, packageDir} = await fixture();
+    write(
+      path.join(packageDir, 'dist/ocean.js'),
+      `import '@acme/definitely-missing-dep';\nexport const oceanTheme = {name: 'ocean', tokens: {}};\n`,
+    );
+    expect(checkThemes(dir, await checkAppThemes(dir))).toEqual({
+      id: 'themes',
+      label: 'Theme packages',
+      status: 'fail',
+      message: 'One theme check needs attention: theme-owners.',
+      fix: 'Follow the fix on the theme-owners check.',
+    });
+  }, 30_000);
+
+  it('passes the module rollup only when every summarized check passed', () => {
+    /** @param {string} id @param {'pass'|'warn'|'fail'|'info'} status */
+    const result = (id, status) => ({id, label: id, status, message: id});
+    const passing = [
+      result('theme-owners', 'pass'),
+      result('theme-module', 'pass'),
+    ];
+
+    expect(
+      checkThemes(process.cwd(), [
+        ...passing,
+        result('theme-stylesheet-imports', 'info'),
+      ]),
+    ).toEqual({
+      id: 'themes',
+      label: 'Theme packages',
+      status: 'info',
+      message:
+        'One theme check could not prove its result: theme-stylesheet-imports.',
+      fix: 'See the theme-stylesheet-imports check.',
+    });
+    expect(
+      checkThemes(process.cwd(), [
+        result('theme-owners', 'fail'),
+        result('theme-module', 'pass'),
+        result('theme-fonts', 'warn'),
+        result('theme-global-rules', 'info'),
+      ]),
+    ).toMatchObject({
+      status: 'fail',
+      message: '2 theme checks need attention: theme-owners, theme-fonts.',
+    });
+    expect(checkThemes(process.cwd(), passing)).toMatchObject({
+      status: 'pass',
+    });
+  });
+
+  /**
+   * An app with installed single-theme packages that export their built module
+   * and stylesheet, as the published `@blue-patterns/theme-*` packages do.
+   * @param {string} name @param {string[]} slugs
+   */
+  function appWithBuiltThemes(name, slugs) {
+    const dir = emptyApp(name);
+    write(
+      path.join(dir, 'package.json'),
+      JSON.stringify({
+        name: 'app',
+        private: true,
+        dependencies: Object.fromEntries(
+          slugs.map(slug => [`@blue-patterns/theme-${slug}`, CLI_VERSION]),
+        ),
+      }),
+    );
+    write(
+      path.join(dir, 'node_modules/@blue-patterns/core/package.json'),
+      JSON.stringify({name: '@blue-patterns/core', version: CLI_VERSION}),
+    );
+    for (const slug of slugs) {
+      const packageDir = path.join(
+        dir,
+        'node_modules/@blue-patterns',
+        `theme-${slug}`,
+      );
+      write(
+        path.join(packageDir, 'package.json'),
+        JSON.stringify({
+          name: `@blue-patterns/theme-${slug}`,
+          version: CLI_VERSION,
+          type: 'module',
+          exports: {
+            '.': './dist/index.js',
+            './built': `./dist/${slug}.js`,
+            './theme.css': './dist/theme.css',
+          },
+        }),
+      );
+      write(
+        path.join(packageDir, `dist/${slug}.js`),
+        `export const ${slug}Theme = {name: '${slug}', tokens: {}};\n`,
+      );
+      write(
+        path.join(packageDir, 'dist/index.js'),
+        `export {${slug}Theme} from './${slug}.js';\n`,
+      );
+      write(
+        path.join(packageDir, 'dist/theme.css'),
+        `[data-astryx-theme="${slug}"] { --color-text: black; }\n`,
+      );
+    }
+    return dir;
+  }
+
+  /** @param {string} dir */
+  async function themesCheck(dir) {
+    return checkThemes(
+      dir,
+      await checkAppThemes(dir),
+      await themeImportWiring(dir),
+    );
+  }
+
+  it('an editor theme and a theme source that extend a package theme wire nothing; the app importing it does', async () => {
+    const dir = appWithBuiltThemes('themes-editor-unwired', ['neutral']);
+    // The theme editor's generated settings module: it imports its base
+    // only to extend it.
+    write(
+      path.join(dir, 'themes/t/t.settings.ts'),
+      [
+        '// Generated by `astryx experimental theme editor` from t.settings.json on every change: do not edit.',
+        "import {defineTheme} from '@blue-patterns/core/theme';",
+        "import {neutralTheme as base} from '@blue-patterns/theme-neutral/built';",
+        '',
+        'export const tSettings = defineTheme({',
+        '  extends: base,',
+        '});',
+        '',
+      ].join('\n'),
+    );
+    // A built module of it, generated by a build.
+    write(
+      path.join(dir, 'themes/t/t.js'),
+      "/**\n * @generated by `astryx theme build`\n */\nimport {neutralTheme} from '@blue-patterns/theme-neutral/built';\nexport const tTheme = {...neutralTheme, name: 't'};\n",
+    );
+    // A theme source of the user's own with no generated header: it too
+    // only extends the package theme.
+    write(
+      path.join(dir, 'themes/own/own.theme.ts'),
+      "import {defineTheme} from '@blue-patterns/core/theme';\nimport {neutralTheme} from '@blue-patterns/theme-neutral/built';\nexport const ownTheme = defineTheme({name: 'own', extends: neutralTheme});\n",
+    );
+
+    expect((await themeImportWiring(dir)).wired).toEqual([]);
+    expect(await themesCheck(dir)).toMatchObject({
+      status: 'warn',
+      message:
+        'Theme package(s) installed (@blue-patterns/theme-neutral) but no theme appears wired.',
+    });
+
+    // The app itself imports the theme: wired.
+    write(
+      path.join(dir, 'app/layout.tsx'),
+      "import '@blue-patterns/theme-neutral/theme.css';\nexport default function Layout() { return null; }\n",
+    );
+    expect(await themesCheck(dir)).toMatchObject({
+      status: 'pass',
+      message: expect.stringContaining(
+        'wired by import: neutral (app/layout.tsx)',
+      ),
+    });
+  });
+
+  it('counts themes the app imports by their built module or stylesheet as wired, naming the file', async () => {
+    // The shape of an internal app template: a layout that imports each
+    // theme stylesheet and a provider that imports each built theme.
+    const dir = appWithBuiltThemes('themes-imported', ['neutral', 'butter']);
+    write(
+      path.join(dir, 'app/layout.tsx'),
+      "import '@blue-patterns/core/astryx.css';\nimport '@blue-patterns/theme-neutral/theme.css';\nimport '@blue-patterns/theme-butter/theme.css';\nexport default function Layout() { return null; }\n",
+    );
+    write(
+      path.join(dir, 'app/themes/ThemeProvider.tsx'),
+      "import {butterTheme} from '@blue-patterns/theme-butter/built';\nimport {neutralTheme} from '@blue-patterns/theme-neutral/built';\nexport const themes = {butterTheme, neutralTheme};\n",
+    );
+
+    expect((await themeImportWiring(dir)).wired).toEqual([
+      {
+        slug: 'butter',
+        owner: '@blue-patterns/theme-butter',
+        file: 'app/layout.tsx',
+      },
+      {
+        slug: 'neutral',
+        owner: '@blue-patterns/theme-neutral',
+        file: 'app/layout.tsx',
+      },
+    ]);
+    expect(await themesCheck(dir)).toEqual({
+      id: 'themes',
+      label: 'Theme packages',
+      status: 'pass',
+      message:
+        'Theme package(s) installed (@blue-patterns/theme-butter, @blue-patterns/theme-neutral); wired by import: butter (app/layout.tsx), neutral (app/layout.tsx).',
+    });
+    const report = await runChecks({cwd: dir});
+    expect(report.checks.find(item => item.id === 'themes')).toMatchObject({
+      status: 'pass',
+      message: expect.stringContaining(
+        'wired by import: butter (app/layout.tsx)',
+      ),
+    });
+  }, 30_000);
+
+  it('counts a built module import alone, and a stylesheet @import', async () => {
+    const dir = appWithBuiltThemes('themes-module-only', ['neutral', 'stone']);
+    write(
+      path.join(dir, 'src/theme.ts'),
+      "export {neutralTheme} from '@blue-patterns/theme-neutral/built';\n",
+    );
+    write(
+      path.join(dir, 'src/globals.css'),
+      '@import "@blue-patterns/theme-stone/theme.css";\n',
+    );
+
+    expect((await themeImportWiring(dir)).wired).toEqual([
+      {
+        slug: 'neutral',
+        owner: '@blue-patterns/theme-neutral',
+        file: 'src/theme.ts',
+      },
+      {
+        slug: 'stone',
+        owner: '@blue-patterns/theme-stone',
+        file: 'src/globals.css',
+      },
+    ]);
+  });
+
+  it('reads a stylesheet @import in url() without quotes, in any case', async () => {
+    const dir = appWithBuiltThemes('themes-css-url', ['stone']);
+    write(
+      path.join(dir, 'src/globals.css'),
+      '@IMPORT url(@blue-patterns/theme-stone/theme.css);\n',
+    );
+
+    expect((await themeImportWiring(dir)).wired).toEqual([
+      {
+        slug: 'stone',
+        owner: '@blue-patterns/theme-stone',
+        file: 'src/globals.css',
+      },
+    ]);
+  });
+
+  it('keeps the warning when the app only installs a theme, imports its types, or imports it from outside its own source', async () => {
+    const dir = appWithBuiltThemes('themes-not-imported', ['neutral']);
+    const warning = {
+      id: 'themes',
+      label: 'Theme packages',
+      status: 'warn',
+      message:
+        'Theme package(s) installed (@blue-patterns/theme-neutral) but no theme appears wired.',
+      fix: expect.stringContaining('theme add <slug>`.'),
+    };
+    expect(await themesCheck(dir)).toEqual(warning);
+
+    write(
+      path.join(dir, 'src/types.ts'),
+      "import type {neutralTheme} from '@blue-patterns/theme-neutral/built';\nexport type T = typeof neutralTheme;\n",
+    );
+    write(
+      path.join(dir, 'dist/app.js'),
+      "import '@blue-patterns/theme-neutral/theme.css';\n",
+    );
+    write(
+      path.join(dir, 'node_modules/some-lib/index.js'),
+      "import '@blue-patterns/theme-neutral/theme.css';\n",
+    );
+    // Any other subpath of the package is not the theme's built import.
+    write(
+      path.join(dir, 'src/source.ts'),
+      "import {neutralTheme} from '@blue-patterns/theme-neutral';\nvoid neutralTheme;\n",
+    );
+    expect(await themeImportWiring(dir)).toEqual({wired: [], unconfirmed: []});
+    expect(await themesCheck(dir)).toEqual(warning);
+  });
+
+  it('follows a theme passed to Theme through a variable to its package', async () => {
+    // A provider that picks the theme into a variable, from the package root.
+    const dir = appWithBuiltThemes('themes-variable', ['matcha']);
+    write(
+      path.join(dir, 'app/providers.tsx'),
+      [
+        "import {Theme} from '@blue-patterns/core/theme';",
+        "import {matchaTheme} from '@blue-patterns/theme-matcha';",
+        'const appTheme = matchaTheme;',
+        'export function Providers({children}: {children: React.ReactNode}) {',
+        '  return <Theme theme={appTheme} mode="system">{children}</Theme>;',
+        '}',
+        '',
+      ].join('\n'),
+    );
+
+    expect(await themeImportWiring(dir)).toEqual({
+      wired: [
+        {
+          slug: 'matcha',
+          owner: '@blue-patterns/theme-matcha',
+          file: 'app/providers.tsx',
+        },
+      ],
+      unconfirmed: [],
+    });
+    expect(await themesCheck(dir)).toMatchObject({
+      status: 'pass',
+      message: expect.stringContaining(
+        'wired by import: matcha (app/providers.tsx)',
+      ),
+    });
+  });
+
+  it('follows an aliased Theme, defineTheme extends and a relative re-export', async () => {
+    const dir = appWithBuiltThemes('themes-traced', ['neutral', 'stone']);
+    write(
+      path.join(dir, 'src/brand.ts'),
+      [
+        "import {defineTheme} from '@blue-patterns/core';",
+        "import {neutralTheme as base} from '@blue-patterns/theme-neutral';",
+        "export const brandTheme = defineTheme({name: 'brand', extends: base});",
+        "export {stoneTheme as quietTheme} from '@blue-patterns/theme-stone';",
+        '',
+      ].join('\n'),
+    );
+    write(
+      path.join(dir, 'src/App.tsx'),
+      [
+        "import {Theme as AppTheme} from '@blue-patterns/core';",
+        "import {brandTheme, quietTheme} from './brand';",
+        'export const App = () => (',
+        '  <AppTheme theme={brandTheme}><AppTheme theme={quietTheme as never} /></AppTheme>',
+        ');',
+        '',
+      ].join('\n'),
+    );
+
+    expect((await themeImportWiring(dir)).wired).toEqual([
+      {
+        slug: 'neutral',
+        owner: '@blue-patterns/theme-neutral',
+        file: 'src/App.tsx',
+      },
+      {slug: 'stone', owner: '@blue-patterns/theme-stone', file: 'src/App.tsx'},
+    ]);
+  });
+
+  it('never counts a theme whose package is not installed', async () => {
+    // The CLI bundles a descriptor for every official theme; that is not the
+    // package being installed.
+    const dir = emptyApp('themes-not-installed');
+    write(
+      path.join(dir, 'package.json'),
+      JSON.stringify({name: 'app', private: true}),
+    );
+    write(
+      path.join(dir, 'node_modules/@blue-patterns/core/package.json'),
+      JSON.stringify({name: '@blue-patterns/core', version: CLI_VERSION}),
+    );
+    write(
+      path.join(dir, 'app/providers.tsx'),
+      [
+        "import {Theme} from '@blue-patterns/core/theme';",
+        "import {neutralTheme} from '@blue-patterns/theme-neutral/built';",
+        "import '@blue-patterns/theme-neutral/theme.css';",
+        'export const Providers = ({children}: any) => (',
+        '  <Theme theme={neutralTheme}>{children}</Theme>',
+        ');',
+        '',
+      ].join('\n'),
+    );
+
+    expect((await themeImportWiring(dir)).wired).toEqual([]);
+    expect(await themesCheck(dir)).toMatchObject({
+      status: 'warn',
+      message: 'No @blue-patterns/theme-* packages are installed.',
+    });
+  });
+
+  it('leaves a theme declared inside a component unconfirmed, like other module readers', async () => {
+    const dir = appWithBuiltThemes('themes-inner-scope', ['matcha']);
+    write(
+      path.join(dir, 'app/providers.tsx'),
+      [
+        "import {Theme} from '@blue-patterns/core/theme';",
+        "import {matchaTheme} from '@blue-patterns/theme-matcha';",
+        'export function Providers({children}: any) {',
+        '  const theme = matchaTheme;',
+        '  return <Theme theme={theme}>{children}</Theme>;',
+        '}',
+        '',
+      ].join('\n'),
+    );
+
+    expect(await themeImportWiring(dir)).toEqual({
+      wired: [],
+      unconfirmed: [{file: 'app/providers.tsx'}],
+    });
+  });
+
+  it('says it could not confirm a theme passed to Theme that it cannot trace', async () => {
+    const dir = appWithBuiltThemes('themes-untraced', ['matcha']);
+    write(
+      path.join(dir, 'app/providers.tsx'),
+      [
+        "import {Theme} from '@blue-patterns/core/theme';",
+        'export function Providers({theme, children}: any) {',
+        '  return <Theme theme={theme}>{children}</Theme>;',
+        '}',
+        '',
+      ].join('\n'),
+    );
+
+    expect(await themeImportWiring(dir)).toEqual({
+      wired: [],
+      unconfirmed: [{file: 'app/providers.tsx'}],
+    });
+    expect(await themesCheck(dir)).toEqual({
+      id: 'themes',
+      label: 'Theme packages',
+      status: 'info',
+      message:
+        'Theme package(s) installed (@blue-patterns/theme-matcha); app/providers.tsx passes a theme to Theme that doctor could not trace to a theme import, so it could not confirm which theme is wired.',
+      fix: expect.stringContaining('theme add <slug>`.'),
+    });
+  });
+
+  it('leaves package.json astryx.theme deciding the result, without scanning', async () => {
+    const dir = appWithBuiltThemes('themes-astryx-theme', ['neutral']);
+    write(
+      path.join(dir, 'package.json'),
+      JSON.stringify({
+        name: 'app',
+        private: true,
+        astryx: {theme: '@blue-patterns/theme-neutral'},
+      }),
+    );
+    write(
+      path.join(dir, 'app/layout.tsx'),
+      "import '@blue-patterns/theme-neutral/theme.css';\n",
+    );
+    expect(await themeImportWiring(dir)).toEqual({wired: [], unconfirmed: []});
+    expect(await themesCheck(dir)).toMatchObject({
+      status: 'pass',
+      message:
+        'Theme package(s) installed (@blue-patterns/theme-neutral); wired via package.json astryx.theme.',
+    });
+  });
+
+  it('appears once in the doctor report, right after version alignment, with and without a module', async () => {
+    const {dir} = await fixture();
+    for (const cwd of [emptyApp('themes-report'), dir]) {
+      const ids = (await runChecks({cwd})).checks.map(item => item.id);
+      expect(ids.filter(id => id === 'themes')).toHaveLength(1);
+      expect(ids.indexOf('themes')).toBe(ids.indexOf('version-alignment') + 1);
+      expect(ids.indexOf('themes')).toBeLessThan(
+        ids.findIndex(id => id === 'theme-management' || id === 'theme-owners'),
+      );
+    }
+  }, 30_000);
+});
+
+describe('app-theme doctor checks', () => {
+  it('returns ten positive passes for a healthy package theme', async () => {
+    const {dir} = await fixture();
+    const checks = await checkAppThemes(dir);
+
+    expect(checks.map(item => item.id)).toEqual([
+      'theme-owners',
+      'theme-module',
+      'theme-module-import',
+      'theme-stylesheet-imports',
+      'theme-local-builds',
+      'theme-private-variables',
+      'theme-core-peers',
+      'theme-default',
+      'theme-fonts',
+      'theme-global-rules',
+    ]);
+    expect(checks.map(item => item.status)).toEqual(Array(10).fill('pass'));
+    expect(check(checks, 'theme-owners').message).toContain(
+      'every built module loads',
+    );
+  });
+
+  it('fails theme-owners when a recorded module has a missing dependency', async () => {
+    const {dir, packageDir} = await fixture();
+    write(
+      path.join(packageDir, 'dist/ocean.js'),
+      `import '@acme/definitely-missing-dep';\nexport const oceanTheme = {name: 'ocean', tokens: {}};\n`,
+    );
+
+    const result = check(await checkAppThemes(dir), 'theme-owners');
+
+    expect(result).toMatchObject({id: 'theme-owners', status: 'fail'});
+    expect(result.message).toContain('Theme "ocean"');
+    expect(result.message).toContain('@acme/definitely-missing-dep');
+    expect(result.message).not.toMatch(/\n\s+at /u);
+    const cli = runDoctor(dir);
+    expect(cli.status).toBe(1);
+    expect(cli.stdout).not.toContain('No failures');
+    expect(cli.stdout).toContain('Theme owners and built imports');
+    expect(cli.stdout).toContain('@acme/definitely-missing-dep');
+    expect(cli.stderr).not.toMatch(/\n\s+at /u);
+  }, 30_000);
+
+  it('fails theme-owners when a recorded module is malformed', async () => {
+    const {dir, packageDir} = await fixture();
+    write(
+      path.join(packageDir, 'dist/ocean.js'),
+      'export const oceanTheme = ;\n',
+    );
+
+    const result = check(await checkAppThemes(dir), 'theme-owners');
+
+    expect(result).toMatchObject({id: 'theme-owners', status: 'fail'});
+    expect(result.message).toContain('Theme "ocean"');
+    expect(result.message).toContain('does not export "oceanTheme"');
+    expect(result.message).not.toMatch(/\n\s+at /u);
+  });
+
+  it('passes theme-owners when a built module imports its stylesheet', async () => {
+    const {dir, packageDir} = await fixture();
+    write(
+      path.join(packageDir, 'dist/ocean.js'),
+      "import './ocean.css';\nimport '@acme/themes/themes/ocean.css';\nexport const oceanTheme = {name: 'ocean', tokens: {}};\n",
+    );
+
+    const checks = await checkAppThemes(dir);
+
+    expect(checks.map(item => item.status)).toEqual(Array(10).fill('pass'));
+    expect(check(checks, 'theme-owners').message).toContain(
+      'every built module loads',
+    );
+    const cli = runDoctor(dir);
+    expect(cli.status).toBe(0);
+    expect(cli.stdout).not.toContain('could not load its built module');
+  }, 30_000);
+
+  it('passes every check for an entry that loads its fonts and stylesheet and re-exports the built module', async () => {
+    const {dir, packageDir} = await fixture([
+      {
+        slug: 'ocean',
+        fontFamily: 'Ocean Sans',
+        fontCss:
+          "@font-face { font-family: 'Ocean Sans'; src: local('Ocean Sans'); }\n",
+      },
+    ]);
+    write(
+      path.join(packageDir, 'dist/ocean.built.js'),
+      "export const oceanTheme = {name: 'ocean', tokens: {}, fontFamily: 'Ocean Sans'};\n",
+    );
+    write(
+      path.join(packageDir, 'dist/ocean.js'),
+      "import './ocean.fonts.css';\nimport '@acme/themes/themes/ocean.css';\nexport {oceanTheme} from './ocean.built.js';\n",
+    );
+
+    const checks = await checkAppThemes(dir);
+
+    expect(checks.map(item => [item.id, item.status])).toEqual(
+      checks.map(item => [item.id, 'pass']),
+    );
+    expect(checks).toHaveLength(10);
+    const cli = runDoctor(dir);
+    expect(cli.status).toBe(0);
+    expect(cli.stdout).not.toContain('could not load its built module');
+  }, 30_000);
+
+  it('passes every check for an entry that re-exports a theme whose own name differs from its slug', async () => {
+    const {dir, packageDir} = await fixture([
+      {
+        slug: 'ocean',
+        css: '[data-astryx-theme="deep-sea"] { --color-text: black; }\n',
+        fontFamily: 'Ocean Sans',
+        fontCss:
+          "@font-face { font-family: 'Ocean Sans'; src: local('Ocean Sans'); }\n",
+      },
+    ]);
+    write(
+      path.join(packageDir, 'dist/deep-sea.js'),
+      "export const deepSeaTheme = {name: 'deep-sea', tokens: {}, fontFamily: 'Ocean Sans'};\n",
+    );
+    write(
+      path.join(packageDir, 'dist/ocean.js'),
+      "import './ocean.fonts.css';\nimport './ocean.css';\nexport {deepSeaTheme as oceanTheme} from './deep-sea.js';\n",
+    );
+
+    const checks = await checkAppThemes(dir);
+
+    expect(checks.map(item => [item.id, item.status])).toEqual(
+      checks.map(item => [item.id, 'pass']),
+    );
+    expect(checks).toHaveLength(10);
+  }, 30_000);
+
+  it.each([
+    [
+      'a missing dependency',
+      "import '@acme/definitely-missing-dep';\nexport const oceanTheme = {name: 'ocean', tokens: {}};\n",
+      '@acme/definitely-missing-dep',
+    ],
+    [
+      'a throwing module',
+      "throw new Error('broken theme module');\nexport const oceanTheme = {name: 'ocean', tokens: {}};\n",
+      'broken theme module',
+    ],
+  ])(
+    'still fails theme-owners when a built module imports its stylesheet and has %s',
+    async (_label, rest, detail) => {
+      const {dir, packageDir} = await fixture();
+      write(
+        path.join(packageDir, 'dist/ocean.js'),
+        `import './ocean.css';\n${rest}`,
+      );
+
+      const result = check(await checkAppThemes(dir), 'theme-owners');
+
+      expect(result).toMatchObject({id: 'theme-owners', status: 'fail'});
+      expect(result.message).toContain(
+        'Theme "ocean" from @acme/themes could not load its built module',
+      );
+      expect(result.message).toContain(detail);
+    },
+  );
+
+  it("still fails theme-owners when the theme's stylesheet export is missing", async () => {
+    const {dir, packageDir} = await fixture();
+    write(
+      path.join(packageDir, 'dist/ocean.js'),
+      "import './ocean.css';\nexport const oceanTheme = {name: 'ocean', tokens: {}};\n",
+    );
+    fs.rmSync(path.join(packageDir, 'dist/ocean.css'));
+
+    const result = check(await checkAppThemes(dir), 'theme-owners');
+
+    expect(result).toMatchObject({id: 'theme-owners', status: 'fail'});
+    expect(result.message).toContain(
+      'Missing stylesheet export @acme/themes/themes/ocean.css',
+    );
+  });
+
+  it('still fails theme-owners when another stylesheet the built module imports is missing', async () => {
+    const {dir, packageDir} = await fixture();
+    write(
+      path.join(packageDir, 'dist/ocean.js'),
+      "import './ocean.css';\nimport './fonts.css';\nexport const oceanTheme = {name: 'ocean', tokens: {}};\n",
+    );
+
+    const result = check(await checkAppThemes(dir), 'theme-owners');
+
+    expect(result).toMatchObject({id: 'theme-owners', status: 'fail'});
+    expect(result.message).toContain(
+      'Theme "ocean" from @acme/themes could not load its built module',
+    );
+    expect(result.message).toContain('fonts.css');
+  });
+
+  it("warns on theme-owners when the theme's stylesheet imports a file its package does not ship", async () => {
+    const {dir, packageDir} = await fixture([
+      {
+        slug: 'ocean',
+        css: '@import \'./ocean-base.css\';\n[data-astryx-theme="ocean"] { --color-text: black; background: url(./waves.svg); }\n',
+      },
+    ]);
+
+    const checks = await checkAppThemes(dir);
+    const result = check(checks, 'theme-owners');
+
+    // A warning: the module itself loads.
+    expect(result).toMatchObject({id: 'theme-owners', status: 'warn'});
+    expect(checks.some(item => item.status === 'fail')).toBe(false);
+    expect(result.message).toContain(
+      'Theme "ocean" from @acme/themes: its built module loads, but it or its stylesheet names a file the package does not ship',
+    );
+    expect(result.message).toContain(
+      'dist/ocean.css:1: imports "./ocean-base.css", which is not a file in the package',
+    );
+    expect(result.message).toContain('imports "./waves.svg"');
+    expect(result.message).not.toContain('every built module loads');
+
+    write(path.join(packageDir, 'dist/ocean-base.css'), ':root {}\n');
+    write(path.join(packageDir, 'dist/waves.svg'), '<svg/>\n');
+    expect(check(await checkAppThemes(dir), 'theme-owners').status).toBe(
+      'pass',
+    );
+  });
+
+  it('passes theme-owners when a built module imports a folder by its index file', async () => {
+    const {dir, packageDir} = await fixture();
+    write(
+      path.join(packageDir, 'dist/icons/index.js'),
+      'export const icons = {};\n',
+    );
+    write(
+      path.join(packageDir, 'dist/ocean.js'),
+      "import {icons} from './icons';\nexport const oceanTheme = {name: 'ocean', tokens: {}, icons};\n",
+    );
+
+    expect(check(await checkAppThemes(dir), 'theme-owners').status).toBe(
+      'pass',
+    );
+  });
+
+  it('fails theme-owners for an ambiguous multi-theme record', async () => {
+    const {dir, packageDir} = await fixture([{slug: 'ocean'}, {slug: 'reef'}]);
+    const packageFile = path.join(packageDir, 'package.json');
+    const pkg = JSON.parse(fs.readFileSync(packageFile, 'utf-8'));
+    delete pkg.exports['./themes/ocean'];
+    write(packageFile, JSON.stringify(pkg));
+
+    const result = check(await checkAppThemes(dir), 'theme-owners');
+
+    expect(result).toMatchObject({id: 'theme-owners', status: 'fail'});
+    expect(result.message).toContain('ocean');
+    expect(result.message).not.toMatch(/\n\s+at /u);
+  });
+
+  it.each([
+    'theme-local-builds',
+    'theme-private-variables',
+    'theme-core-peers',
+    'theme-fonts',
+    'theme-global-rules',
+  ])('%s cannot pass when theme discovery throws', async id => {
+    const {dir} = await fixture();
+    write(
+      path.join(dir, 'astryx.config.mjs'),
+      "throw new Error('fixture discovery failure');\n",
+    );
+
+    expect(check(await checkAppThemes(dir), id)).toMatchObject({
+      status: 'info',
+    });
+  });
+
+  it('lets the static default check pass when discovery throws', async () => {
+    const {dir} = await fixture();
+    write(
+      path.join(dir, 'astryx.config.mjs'),
+      "throw new Error('fixture discovery failure');\n",
+    );
+
+    expect(check(await checkAppThemes(dir), 'theme-default')).toMatchObject({
+      status: 'pass',
+    });
+  });
+
+  it('check 1 fails when a recorded built stylesheet no longer resolves', async () => {
+    const {dir, packageDir} = await fixture();
+    fs.rmSync(path.join(packageDir, 'dist/ocean.css'));
+
+    expect(check(await checkAppThemes(dir), 'theme-owners')).toMatchObject({
+      status: 'fail',
+      fix: expect.stringContaining('theme add ocean'),
+    });
+  });
+
+  it('check 2 fails when the generated module is hand-edited', async () => {
+    const {dir, moduleFile} = await fixture();
+    fs.appendFileSync(moduleFile, '// hand edit\n');
+
+    expect(check(await checkAppThemes(dir), 'theme-module')).toMatchObject({
+      status: 'fail',
+      fix: expect.stringContaining('theme use ocean'),
+    });
+  });
+
+  it('check 3 warns when no project source imports the generated module', async () => {
+    const {dir} = await fixture([{slug: 'ocean'}], {importModule: false});
+
+    expect(
+      check(await checkAppThemes(dir), 'theme-module-import'),
+    ).toMatchObject({
+      status: 'warn',
+      fix: expect.stringContaining('themes[defaultThemeSlug]'),
+    });
+  });
+
+  it('check 4 fails when a built module import loses its stylesheet pair', async () => {
+    const {dir, moduleFile} = await fixture();
+    const source = fs
+      .readFileSync(moduleFile, 'utf-8')
+      .replace('import "@acme/themes/themes/ocean.css";\n', '');
+    fs.writeFileSync(moduleFile, source);
+
+    expect(
+      check(await checkAppThemes(dir), 'theme-stylesheet-imports'),
+    ).toMatchObject({
+      status: 'fail',
+      fix: expect.stringContaining('theme use ocean'),
+    });
+  });
+
+  it('check 4 leaves files that only extend a theme: theme sources and generated files', async () => {
+    const {dir, moduleFile} = await fixture();
+    const specifier = /from ["']([^"']*ocean[^"']*)["']/.exec(
+      fs.readFileSync(moduleFile, 'utf-8'),
+    )?.[1];
+    expect(specifier).toBeTruthy();
+    const brand = path.join(dir, 'themes/brand');
+    fs.mkdirSync(brand, {recursive: true});
+    // A theme source that extends the added theme.
+    fs.writeFileSync(
+      path.join(brand, 'brand.theme.ts'),
+      `import {defineTheme} from '@blue-patterns/core/theme';\nimport {oceanTheme} from '${specifier}';\nexport const brandTheme = defineTheme({extends: oceanTheme, name: 'brand'});\n`,
+    );
+    // Its build and the editor's settings module, with their headers.
+    fs.writeFileSync(
+      path.join(brand, 'brand.js'),
+      `/**\n * @generated by \`astryx theme build\` — do not edit manually.\n * Source: themes/brand/brand.theme.ts\n */\n\nimport {oceanTheme} from '${specifier}';\nexport const brandTheme = {...oceanTheme};\n`,
+    );
+    fs.writeFileSync(
+      path.join(brand, 'brand.settings.ts'),
+      `// Generated by \`astryx experimental theme editor\` from brand.settings.json on every change: do not edit.\nimport {oceanTheme} from '${specifier}';\nexport const brandSettings = oceanTheme;\n`,
+    );
+    expect(
+      check(await checkAppThemes(dir), 'theme-stylesheet-imports'),
+    ).toMatchObject({status: 'pass'});
+
+    // An app file that renders the theme without its stylesheet still
+    // fails, even beside an inline extends or a comment naming one.
+    for (const body of [
+      `export const page = oceanTheme;\n`,
+      `import {defineTheme} from '@blue-patterns/core/theme';\nexport const themes = [oceanTheme, defineTheme({extends: oceanTheme, name: 'x'})];\n`,
+      `// defineTheme({extends: oceanTheme})\nexport const page = oceanTheme;\n`,
+      // An extend-only import beside another way of loading the module.
+      `import {defineTheme} from '@blue-patterns/core/theme';\nexport const t = defineTheme({extends: oceanTheme, name: 'x'});\nexport * from '${specifier}';\n`,
+      `import {defineTheme} from '@blue-patterns/core/theme';\nexport const t = defineTheme({extends: oceanTheme, name: 'x'});\nexport const later = () => import('${specifier}');\n`,
+      `import {defineTheme} from '@blue-patterns/core/theme';\nexport const t = defineTheme({extends: oceanTheme, name: 'x'});\nexport const later = () => require('${specifier}');\n`,
+    ]) {
+      fs.writeFileSync(
+        path.join(dir, 'src/Page.tsx'),
+        `import {oceanTheme} from '${specifier}';\n${body}`,
+      );
+      expect(
+        check(await checkAppThemes(dir), 'theme-stylesheet-imports'),
+      ).toMatchObject({status: 'fail'});
+    }
+  });
+
+  it('check 5 fails when an added local theme cannot reproduce its outputs', async () => {
+    const {dir} = await fixture();
+    await themeEject('ocean', {cwd: dir, package: '@acme/themes'});
+    const localDir = path.join(dir, 'src/themes/ocean');
+    const sourceFile = path.join(localDir, 'oceanTheme.ts');
+    fs.writeFileSync(
+      sourceFile,
+      "const oceanTheme = {name: 'ocean', tokens: {'--color-bg': '#000'}};\nexport {oceanTheme};\nexport default oceanTheme;\n",
+    );
+    await themeBuild(sourceFile, {}, {cwd: dir});
+    await themeAdd('ocean', {cwd: dir, import: true});
+    expect(
+      parseThemeModuleRecord(
+        fs.readFileSync(path.join(dir, 'src/astryx-themes.ts'), 'utf-8'),
+      ),
+    ).toMatchObject({themes: {ocean: './src/themes'}});
+    fs.appendFileSync(path.join(localDir, 'ocean.css'), '\n.injected {}\n');
+
+    expect(
+      check(await checkAppThemes(dir), 'theme-local-builds'),
+    ).toMatchObject({
+      status: 'fail',
+      fix: expect.stringContaining('theme build'),
+    });
+  });
+
+  it('check 5 compares a local theme another command generates, and its fix is that exact command', async () => {
+    const {dir} = await fixture();
+    await themeEject('ocean', {cwd: dir, package: '@acme/themes'});
+    const localDir = path.join(dir, 'src/themes/ocean');
+    const sourceFile = path.join(localDir, 'oceanTheme.ts');
+    fs.writeFileSync(
+      sourceFile,
+      "const oceanTheme = {name: 'ocean', tokens: {'--color-bg': '#000'}};\nexport {oceanTheme};\nexport default oceanTheme;\n",
+    );
+    await themeBuild(sourceFile, {}, {cwd: dir});
+    await themeAdd('ocean', {cwd: dir, import: true});
+    // The source now carries another command's generated mark, naming the
+    // exact command that writes it.
+    fs.writeFileSync(
+      sourceFile,
+      `// Written by \`astryx experimental theme editor show ocean\` after every build; do not edit it here.\n${fs.readFileSync(sourceFile, 'utf8')}`,
+    );
+    expect(
+      check(await checkAppThemes(dir), 'theme-local-builds'),
+    ).toMatchObject({status: 'pass'});
+
+    // A hand-edited output is still found stale; the fix runs the command
+    // the mark names, never a `theme build` of the generated source.
+    const css = path.join(localDir, 'ocean.css');
+    fs.writeFileSync(
+      css,
+      `${fs.readFileSync(css, 'utf8')}\n.mine { color: red; }\n`,
+    );
+    const fresh = check(await checkAppThemes(dir), 'theme-local-builds');
+    expect(fresh.status).toBe('fail');
+    expect(fresh.message).toContain('ocean');
+    expect(fresh.fix).toMatch(
+      / experimental theme editor show ocean; .* theme add ocean$/,
+    );
+    expect(fresh.fix).not.toMatch(/theme build/);
+
+    // Its built module gone: the owners fix is the same exact command.
+    fs.rmSync(path.join(localDir, 'ocean.js'));
+    const owners = check(await checkAppThemes(dir), 'theme-owners');
+    expect(owners.status).toBe('fail');
+    expect(owners.fix).toMatch(
+      / experimental theme editor show ocean; .* theme add ocean$/,
+    );
+    expect(owners.fix).not.toMatch(/theme build/);
+
+    // A themes folder discovery refuses: the fix names the theme only when
+    // the message does.
+    write(path.join(dir, 'src/themes/manifest.json'), '{}\n');
+    const broken = check(await checkAppThemes(dir), 'theme-owners');
+    expect(broken.fix).not.toContain('<slug>');
+    expect(broken.fix).not.toMatch(/theme add (?!ocean\b)/);
+  });
+
+  it('check 5 names the generating command when a marked source that re-exports its built module has none', async () => {
+    for (const mark of [
+      'Written by `astryx experimental theme editor show ocean`',
+      // A copy written before files named their exact command.
+      'Written by `astryx experimental theme editor`',
+    ]) {
+      const {dir} = await fixture();
+      await themeEject('ocean', {cwd: dir, package: '@acme/themes'});
+      const localDir = path.join(dir, 'src/themes/ocean');
+      const sourceFile = path.join(localDir, 'oceanTheme.ts');
+      fs.writeFileSync(
+        sourceFile,
+        "const oceanTheme = {name: 'ocean', tokens: {'--color-bg': '#000'}};\nexport {oceanTheme};\nexport default oceanTheme;\n",
+      );
+      await themeBuild(sourceFile, {}, {cwd: dir});
+      await themeAdd('ocean', {cwd: dir, import: true});
+      // The source re-exports its built module, as a generated copy does.
+      fs.writeFileSync(
+        sourceFile,
+        `// ${mark} after every build; do not edit it here.\nexport {oceanTheme, default} from './ocean.js';\n`,
+      );
+      fs.rmSync(path.join(localDir, 'ocean.js'));
+      const owners = check(await checkAppThemes(dir), 'theme-owners');
+      expect(owners.status, mark).toBe('fail');
+      expect(owners.fix, mark).toMatch(
+        / experimental theme editor show ocean; .* theme add ocean$/,
+      );
+      expect(owners.fix, mark).not.toMatch(/theme build/);
+      expect(owners.message, mark).not.toMatch(/Run `[^`]*theme build/);
+    }
+    // A theme whose name has a dash: its source is named by the theme's
+    // identifier (myThemeTheme.ts), as the editor and eject write it.
+    const {dir} = await fixture([
+      {slug: 'my-theme', exportName: 'myThemeTheme'},
+    ]);
+    await themeEject('my-theme', {cwd: dir, package: '@acme/themes'});
+    const localDir = path.join(dir, 'src/themes/my-theme');
+    const sourceFile = path.join(localDir, 'myThemeTheme.ts');
+    expect(fs.existsSync(sourceFile)).toBe(true);
+    fs.writeFileSync(
+      sourceFile,
+      "const myThemeTheme = {name: 'my-theme', tokens: {'--color-bg': '#000'}};\nexport {myThemeTheme};\nexport default myThemeTheme;\n",
+    );
+    await themeBuild(sourceFile, {}, {cwd: dir});
+    await themeAdd('my-theme', {cwd: dir, import: true});
+    fs.writeFileSync(
+      sourceFile,
+      "// Written by `astryx experimental theme editor show my-theme` after every build; do not edit it here.\nexport {myThemeTheme, default} from './my-theme.js';\n",
+    );
+    fs.rmSync(path.join(localDir, 'my-theme.js'));
+    const owners = check(await checkAppThemes(dir), 'theme-owners');
+    expect(owners.status).toBe('fail');
+    expect(owners.fix).toMatch(
+      / experimental theme editor show my-theme; .* theme add my-theme$/,
+    );
+  });
+
+  it('check 5 leaves a local theme that sets a private var to the private-variables check', async () => {
+    const {dir} = await fixture();
+    await themeEject('ocean', {cwd: dir, package: '@acme/themes'});
+    const localDir = path.join(dir, 'src/themes/ocean');
+    const sourceFile = path.join(localDir, 'oceanTheme.ts');
+    fs.writeFileSync(
+      sourceFile,
+      "const oceanTheme = {name: 'ocean', tokens: {'--color-bg': '#000'}};\nexport {oceanTheme};\nexport default oceanTheme;\n",
+    );
+    await themeBuild(sourceFile, {}, {cwd: dir});
+    await themeAdd('ocean', {cwd: dir, import: true});
+    // A hand edit sets a private var after the theme was built and added.
+    fs.writeFileSync(
+      sourceFile,
+      "const oceanTheme = {name: 'ocean', tokens: {'--color-bg': '#000'}, components: {button: {base: {'--_button-radius': '2px'}}}};\nexport {oceanTheme};\nexport default oceanTheme;\n",
+    );
+
+    const checks = await checkAppThemes(dir);
+    // Not a stale output, and never a pass: the build refuses the theme, so
+    // its outputs were not compared.
+    expect(check(checks, 'theme-local-builds')).toMatchObject({
+      status: 'info',
+      message: expect.stringContaining('Not checked: ocean'),
+      fix: expect.stringContaining('theme-private-variables'),
+    });
+    const priv = check(checks, 'theme-private-variables');
+    expect(priv).toMatchObject({status: 'fail'});
+    expect(priv.message).toContain('--_button-radius');
+  });
+
+  it('check 5 names a package a local theme imports and the app lacks, with the install command', async () => {
+    const {dir} = await fixture();
+    await themeEject('ocean', {cwd: dir, package: '@acme/themes'});
+    const localDir = path.join(dir, 'src/themes/ocean');
+    const sourceFile = path.join(localDir, 'oceanTheme.ts');
+    fs.writeFileSync(
+      sourceFile,
+      "const oceanTheme = {name: 'ocean', tokens: {'--color-bg': '#000'}};\nexport {oceanTheme};\nexport default oceanTheme;\n",
+    );
+    await themeBuild(sourceFile, {}, {cwd: dir});
+    await themeAdd('ocean', {cwd: dir, import: true});
+    fs.writeFileSync(
+      sourceFile,
+      "import 'not-installed-icons';\nconst oceanTheme = {name: 'ocean', tokens: {'--color-bg': '#000'}};\nexport {oceanTheme};\nexport default oceanTheme;\n",
+    );
+
+    expect(
+      check(await checkAppThemes(dir), 'theme-local-builds'),
+    ).toMatchObject({
+      status: 'fail',
+      message: expect.stringContaining('not-installed-icons (ocean)'),
+      fix: expect.stringMatching(
+        /^(npm install|pnpm add|yarn add|bun add) not-installed-icons$/,
+      ),
+    });
+  });
+
+  it('check 5 names the install command and then the rebuild of another stale local theme', async () => {
+    const {dir} = await fixture([{slug: 'ocean'}, {slug: 'reef'}]);
+    for (const slug of ['ocean', 'reef']) {
+      await themeEject(slug, {cwd: dir, package: '@acme/themes'});
+      const sourceFile = path.join(dir, `src/themes/${slug}/${slug}Theme.ts`);
+      fs.writeFileSync(
+        sourceFile,
+        `const ${slug}Theme = {name: '${slug}', tokens: {'--color-bg': '#000'}};\nexport {${slug}Theme};\nexport default ${slug}Theme;\n`,
+      );
+      await themeBuild(sourceFile, {}, {cwd: dir});
+      await themeAdd(slug, {cwd: dir, import: true});
+    }
+    fs.writeFileSync(
+      path.join(dir, 'src/themes/ocean/oceanTheme.ts'),
+      "import 'not-installed-icons';\nconst oceanTheme = {name: 'ocean', tokens: {'--color-bg': '#000'}};\nexport {oceanTheme};\nexport default oceanTheme;\n",
+    );
+    fs.appendFileSync(
+      path.join(dir, 'src/themes/reef/reef.css'),
+      '\n.injected {}\n',
+    );
+
+    const result = check(await checkAppThemes(dir), 'theme-local-builds');
+    expect(result).toMatchObject({
+      status: 'fail',
+      message: expect.stringContaining(
+        'Local theme outputs are also missing or stale: reef.',
+      ),
+    });
+    expect(result.fix).toMatch(
+      /^(npm install|pnpm add|yarn add|bun add) not-installed-icons .*theme build .*reef/,
+    );
+  });
+
+  it("check 5 is info, and builds nothing, when the project's Core is not installed (spec AST-081 FR3)", async () => {
+    // Outside this repository, whose own installed Core would be found above.
+    const {dir} = await fixture(undefined, {root: os.tmpdir()});
+    await themeEject('ocean', {cwd: dir, package: '@acme/themes'});
+    const sourceFile = path.join(dir, 'src/themes/ocean/oceanTheme.ts');
+    fs.writeFileSync(
+      sourceFile,
+      "const oceanTheme = {name: 'ocean', tokens: {'--color-bg': '#000'}};\nexport {oceanTheme};\nexport default oceanTheme;\n",
+    );
+    await themeBuild(sourceFile, {}, {cwd: dir});
+    await themeAdd('ocean', {cwd: dir, import: true});
+    // A fresh clone: the project declares Core but has not installed it.
+    fs.rmSync(path.join(dir, 'node_modules/@blue-patterns/core'), {
+      recursive: true,
+      force: true,
+    });
+
+    expect(check(await checkAppThemes(dir), 'theme-local-builds')).toEqual({
+      id: 'theme-local-builds',
+      label: 'Local theme build freshness',
+      status: 'info',
+      message:
+        "The project's Core isn't installed, so local theme builds were not checked. Install the project's dependencies, then run doctor again.",
+    });
+    // A build that may read only the project's Core refuses instead of
+    // reading another one.
+    await expect(
+      themeBuild(sourceFile, {check: true}, {cwd: dir, projectCore: true}),
+    ).rejects.toMatchObject({code: 'ERR_CORE_NOT_FOUND'});
+  });
+
+  it.skipIf(process.platform === 'win32')(
+    'check 5 through a CLI installed for the computer, in a fresh clone: info, and no carried Core is read or fetched',
+    async () => {
+      const home = fs.mkdtempSync(
+        path.join(os.tmpdir(), 'astryx-doctor-home-'),
+      );
+      dirs.push(home);
+      const g = globalCli('npm', CLI_VERSION, {root: home});
+      const {dir} = await fixture(undefined, {root: os.tmpdir()});
+      await themeEject('ocean', {cwd: dir, package: '@acme/themes'});
+      const sourceFile = path.join(dir, 'src/themes/ocean/oceanTheme.ts');
+      await themeBuild(sourceFile, {}, {cwd: dir});
+      await themeAdd('ocean', {cwd: dir, import: true});
+      fs.rmSync(path.join(dir, 'node_modules/@blue-patterns/core'), {
+        recursive: true,
+        force: true,
+      });
+      const cache = path.join(home, '.cache');
+      const result = spawnSync(process.execPath, [g.bin, 'doctor', '--json'], {
+        cwd: dir,
+        encoding: 'utf8',
+        timeout: 120_000,
+        env: {
+          PATH: path.dirname(process.execPath),
+          HOME: home,
+          USERPROFILE: home,
+          XDG_CACHE_HOME: cache,
+          XDG_CONFIG_HOME: path.join(home, '.config'),
+          // Nothing can be fetched: a fetch of the carried Core would fail.
+          npm_config_registry: 'http://127.0.0.1:9/',
+          npm_config_update_notifier: 'false',
+          NO_COLOR: '1',
+        },
+      });
+      const checks = JSON.parse(result.stdout).data.checks;
+      expect(checks.find(c => c.id === 'theme-local-builds')).toMatchObject({
+        status: 'info',
+      });
+      expect(
+        fs.existsSync(path.join(cache, 'astryx', 'releases', CLI_VERSION)),
+      ).toBe(false);
+    },
+    180_000,
+  );
+
+  it('check 6 ignores private variables generated from guaranteed component properties', async () => {
+    const {dir, packageDir} = await fixture([
+      {
+        slug: 'ocean',
+        css: '[data-astryx-theme="ocean"] { --_button-radius: var(--radius-full); }\n',
+      },
+    ]);
+    write(
+      path.join(packageDir, 'themes/ocean/oceanTheme.ts'),
+      "export const oceanTheme = {name: 'ocean', tokens: {}, components: {button: {base: {borderRadius: 'var(--radius-full)'}}}};\n",
+    );
+
+    expect(
+      check(await checkAppThemes(dir), 'theme-private-variables'),
+    ).toMatchObject({status: 'pass'});
+  });
+
+  it('check 6 fails on a private --_* key in theme input', async () => {
+    const {dir, packageDir} = await fixture();
+    write(
+      path.join(packageDir, 'themes/ocean/oceanTheme.ts'),
+      "export const oceanTheme = {name: 'ocean', tokens: {}, components: {button: {base: {'--_button-radius': '2px'}}}};\n",
+    );
+
+    const result = check(await checkAppThemes(dir), 'theme-private-variables');
+    expect(result).toMatchObject({status: 'fail'});
+    expect(result.message).toContain('--_button-radius');
+  });
+
+  it('check 7 fails when a theme peer range rejects installed Core', async () => {
+    const {dir} = await fixture([{slug: 'ocean'}], {peerRange: '^9.0.0'});
+
+    const result = check(await checkAppThemes(dir), 'theme-core-peers');
+    expect(result).toMatchObject({
+      status: 'fail',
+      fix: expect.stringContaining('npm install'),
+    });
+    expect(result.message).toContain('^9.0.0');
+  });
+
+  it('check 7 passes a theme package whose Core range is empty, which accepts every Core', async () => {
+    const {dir} = await fixture([{slug: 'ocean'}], {peerRange: ''});
+
+    expect(check(await checkAppThemes(dir), 'theme-core-peers')).toMatchObject({
+      status: 'pass',
+    });
+  });
+
+  it('reports an added theme package outside the Core range once, as theme-core-peers', async () => {
+    const {dir} = await fixture([{slug: 'ocean'}], {peerRange: '^9.0.0'});
+
+    const {checks} = await runChecks({cwd: dir});
+    expect(check(checks, 'theme-core-peers')).toMatchObject({status: 'fail'});
+    expect(
+      checks.find(item => item.id === 'integration-core-range'),
+    ).toBeUndefined();
+  }, 30_000);
+
+  it('check 8 fails when the static default is not an added slug', async () => {
+    const {dir, moduleFile} = await fixture();
+    const source = fs
+      .readFileSync(moduleFile, 'utf-8')
+      .replace('"defaultThemeSlug":"ocean"', '"defaultThemeSlug":"ghost"');
+    fs.writeFileSync(moduleFile, source);
+
+    expect(check(await checkAppThemes(dir), 'theme-default')).toMatchObject({
+      status: 'fail',
+      fix: expect.stringContaining('theme use ocean'),
+    });
+  });
+
+  it('check 9 warns when a named font has no stylesheet loader', async () => {
+    const {dir} = await fixture([{slug: 'ocean', fontFamily: 'Ocean Sans'}]);
+
+    const checks = await checkAppThemes(dir);
+    const result = check(checks, 'theme-fonts');
+    expect(result).toMatchObject({
+      status: 'warn',
+      fix: expect.stringContaining('fonts.css'),
+    });
+    expect(result.message).toContain('Ocean Sans');
+    expect(checks.some(item => item.status === 'fail')).toBe(false);
+  });
+
+  it('check 9 warns when a local theme has no font stylesheet', async () => {
+    const {dir} = await fixture([{slug: 'ocean', fontFamily: 'Ocean Sans'}]);
+    await themeEject('ocean', {cwd: dir, package: '@acme/themes'});
+    const sourceFile = path.join(dir, 'src/themes/ocean/oceanTheme.ts');
+    await themeBuild(sourceFile, {}, {cwd: dir});
+    await themeAdd('ocean', {cwd: dir, import: true});
+
+    const checks = await checkAppThemes(dir);
+    expect(check(checks, 'theme-fonts')).toMatchObject({
+      status: 'warn',
+      message: expect.stringContaining('Ocean Sans'),
+      fix: expect.stringContaining('<slug>.fonts.css'),
+    });
+    expect(checks.some(item => item.status === 'fail')).toBe(false);
+  });
+
+  it('check 9 passes when a local @font-face proves the named family', async () => {
+    const {dir, packageDir} = await fixture([
+      {
+        slug: 'ocean',
+        fontFamily: 'Ocean Sans',
+        fontCss:
+          '@font-face { font-family: "Ocean Sans"; src: url("./ocean.woff2"); }\n',
+      },
+    ]);
+    write(path.join(packageDir, 'dist/ocean.woff2'), 'font');
+
+    expect(check(await checkAppThemes(dir), 'theme-fonts')).toMatchObject({
+      status: 'pass',
+    });
+  });
+
+  it('check 9 warns when an external import cannot prove the named family', async () => {
+    const {dir} = await fixture([
+      {
+        slug: 'ocean',
+        fontFamily: 'Ocean Sans',
+        fontCss: '@import url("https://fonts.example/ocean.css");\n',
+      },
+    ]);
+
+    expect(check(await checkAppThemes(dir), 'theme-fonts')).toMatchObject({
+      status: 'warn',
+      message: expect.stringContaining('Ocean Sans'),
+    });
+  });
+
+  it('check 9 follows a local font import, a relative file or a package stylesheet, and proves its families', async () => {
+    for (const spec of [
+      './ocean-faces.css',
+      'ocean-faces.css',
+      'url(ocean-faces.css)',
+      '@fontsource/ocean-sans/index.css',
+    ]) {
+      const {dir, packageDir} = await fixture([
+        {
+          slug: 'ocean',
+          fontFamily: 'Ocean Sans',
+          fontCss: spec.startsWith('url(')
+            ? `@import ${spec};\n`
+            : `@import "${spec}";\n`,
+        },
+      ]);
+      const faces =
+        '@font-face { font-family: "Ocean Sans"; src: url("./ocean.woff2"); }\n';
+      if (!spec.startsWith('@')) {
+        write(path.join(packageDir, 'dist/ocean-faces.css'), faces);
+        write(path.join(packageDir, 'dist/ocean.woff2'), 'font');
+      } else {
+        write(
+          path.join(dir, 'node_modules/@fontsource/ocean-sans/package.json'),
+          JSON.stringify({name: '@fontsource/ocean-sans', version: '1.0.0'}),
+        );
+        write(
+          path.join(dir, 'node_modules/@fontsource/ocean-sans/index.css'),
+          faces,
+        );
+      }
+      expect(
+        check(await checkAppThemes(dir), 'theme-fonts'),
+        spec,
+      ).toMatchObject({status: 'pass'});
+    }
+  });
+
+  it('check 9 warns, never fails, on a local font import it cannot follow', async () => {
+    const {dir} = await fixture([
+      {
+        slug: 'ocean',
+        fontFamily: 'Ocean Sans',
+        fontCss: '@import "@fontsource/not-installed/index.css";\n',
+      },
+    ]);
+    expect(check(await checkAppThemes(dir), 'theme-fonts')).toMatchObject({
+      status: 'warn',
+      message: expect.stringContaining('could not follow'),
+    });
+  });
+
+  it('check 9 warns, never fails, when a chain of local imports runs past the files it follows', async () => {
+    const {dir, packageDir} = await fixture([
+      {
+        slug: 'ocean',
+        fontFamily: 'Ocean Sans',
+        fontCss: '@import "./f1.css";\n',
+      },
+    ]);
+    for (let i = 1; i <= 22; i++)
+      write(
+        path.join(packageDir, `dist/f${i}.css`),
+        i < 22
+          ? `@import "./f${i + 1}.css";\n`
+          : '@font-face { font-family: "Ocean Sans"; src: url("./o.woff2"); }\n',
+      );
+    write(path.join(packageDir, 'dist/o.woff2'), 'font');
+    expect(check(await checkAppThemes(dir), 'theme-fonts')).toMatchObject({
+      status: 'warn',
+      message: expect.stringContaining('could not follow'),
+    });
+  });
+
+  it("check 9 follows a package import from the stylesheet's real folder, as a linked install keeps it", async () => {
+    const {dir, packageDir} = await fixture([
+      {
+        slug: 'ocean',
+        fontFamily: 'Ocean Sans',
+        fontCss: '@import "@fontsource/ocean-sans/index.css";\n',
+      },
+    ]);
+    // The theme package really lives in a store folder beside its own
+    // font package, and the app reaches it through a link.
+    const store = path.join(dir, '.store/themes/node_modules');
+    fs.mkdirSync(path.join(store, '@acme'), {recursive: true});
+    fs.renameSync(packageDir, path.join(store, '@acme/themes'));
+    fs.symlinkSync(path.join(store, '@acme/themes'), packageDir, 'dir');
+    write(
+      path.join(store, '@fontsource/ocean-sans/package.json'),
+      JSON.stringify({name: '@fontsource/ocean-sans', version: '1.0.0'}),
+    );
+    write(
+      path.join(store, '@fontsource/ocean-sans/index.css'),
+      '@font-face { font-family: "Ocean Sans"; src: url("./o.woff2"); }\n',
+    );
+    expect(check(await checkAppThemes(dir), 'theme-fonts')).toMatchObject({
+      status: 'pass',
+    });
+  });
+
+  it('check 10 fails on conflicting unscoped rules across added themes', async () => {
+    const {dir} = await fixture([
+      {slug: 'ocean', css: 'body { color: blue; }\n'},
+      {slug: 'sunset', css: 'body { color: red; }\n'},
+    ]);
+
+    const result = check(await checkAppThemes(dir), 'theme-global-rules');
+    expect(result).toMatchObject({status: 'fail'});
+    expect(result.message).toContain('body');
+  });
+
+  it('reports one information check when the CLI manages no themes', async () => {
+    const dir = fs.mkdtempSync(path.join(REPO_ROOT, '.astryx-doctor-empty-'));
+    dirs.push(dir);
+    write(path.join(dir, 'package.json'), '{"name":"empty"}\n');
+
+    const checks = await checkAppThemes(dir);
+    expect(checks).toEqual([
+      expect.objectContaining({
+        id: 'theme-management',
+        status: 'info',
+        message: expect.stringContaining('manages no themes'),
+        fix: expect.stringContaining('theme add <slug>'),
+      }),
+    ]);
+    expect(checks[0]?.fix).not.toContain('--import');
+  });
+
+  it('reads astryx.theme from the app package when node_modules is hoisted to a workspace root', async () => {
+    const root = fs.mkdtempSync(
+      path.join(REPO_ROOT, '.astryx-doctor-monorepo-'),
+    );
+    dirs.push(root);
+    write(
+      path.join(root, 'package.json'),
+      JSON.stringify({name: 'mono', private: true, workspaces: ['packages/*']}),
+    );
+    for (const name of ['@blue-patterns/core', '@blue-patterns/theme-neutral']) {
+      write(
+        path.join(root, 'node_modules', name, 'package.json'),
+        JSON.stringify({name, version: CLI_VERSION}),
+      );
+    }
+    const app = path.join(root, 'packages/app');
+    write(
+      path.join(app, 'package.json'),
+      JSON.stringify({
+        name: 'app',
+        private: true,
+        dependencies: {
+          '@blue-patterns/core': CLI_VERSION,
+          '@blue-patterns/theme-neutral': CLI_VERSION,
+        },
+        astryx: {theme: '@blue-patterns/theme-neutral'},
+      }),
+    );
+
+    expect(await checkAppThemes(app)).toEqual([
+      expect.objectContaining({
+        id: 'theme-management',
+        status: 'info',
+        message: expect.stringContaining(
+          'astryx.theme value "@blue-patterns/theme-neutral" remains active',
+        ),
+      }),
+    ]);
+    const doctor = runDoctor(app);
+    expect(doctor.stdout).toContain('remains active');
+    expect(doctor.stdout).not.toContain('no theme appears wired');
+  });
+
+  it('names an unmigrated copy without failing a project that has no module', async () => {
+    const dir = fs.mkdtempSync(
+      path.join(REPO_ROOT, '.astryx-doctor-unmigrated-'),
+    );
+    dirs.push(dir);
+    write(path.join(dir, 'package.json'), '{"name":"empty"}\n');
+    write(
+      path.join(dir, 'src/themes/ocean/oceanTheme.ts'),
+      'export const oceanTheme = {};\n',
+    );
+
+    const checks = await checkAppThemes(dir);
+
+    expect(checks).toHaveLength(2);
+    expect(checks.some(item => item.status === 'fail')).toBe(false);
+    expect(checks).toContainEqual(
+      expect.objectContaining({
+        id: 'theme-unmigrated-copies',
+        status: 'warn',
+        message: expect.stringContaining('src/themes/ocean'),
+        fix: expect.stringContaining('upgrade --from 0.6.4 --path . --apply'),
+      }),
+    );
+  });
+});

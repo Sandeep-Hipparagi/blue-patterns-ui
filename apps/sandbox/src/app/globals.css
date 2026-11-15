@@ -1,0 +1,25 @@
+/* Copyright (c) Meta Platforms, Inc. and affiliates. */
+
+@import './layers.css';
+@import '@blue-patterns/core/reset.css';
+@import '@blue-patterns/core/astryx.css';
+@import '@blue-patterns/lab/lab.css';
+@import '@blue-patterns/theme-neutral/theme.css';
+@import '@blue-patterns/theme-matcha/theme.css';
+@import '@blue-patterns/theme-stone/theme.css';
+@import '@blue-patterns/theme-gothic/theme.css';
+@import '@blue-patterns/theme-chocolate/theme.css';
+@import '@blue-patterns/theme-y2k/theme.css';
+@import '@blue-patterns/theme-butter/theme.css';
+@import '../themes/theme-family/unrelated-before.css';
+@import '../themes/theme-family/sandbox-ocean-family.css';
+
+@stylex;
+
+/* This equal-specificity rule is after the family import. The scoped family
+   rule must still win through scope proximity. */
+@layer astryx-theme {
+  :where([data-family-order='after']) .astryx-button[data-variant='primary'] {
+    background-color: var(--color-error);
+  }
+}

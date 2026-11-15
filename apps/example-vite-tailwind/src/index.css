@@ -1,0 +1,17 @@
+/* Copyright (c) Meta Platforms, Inc. and affiliates. */
+
+/*
+ * Layer order for Astryx + Tailwind coexistence in Vite.
+ *
+ * Desired priority (lowest → highest):
+ *   reset → theme → base → astryx-base → astryx-theme → components → utilities
+ */
+@layer reset, theme, base, astryx-base, astryx-theme, components, utilities;
+
+@import "tailwindcss/theme.css" layer(theme);
+@import "tailwindcss/preflight.css" layer(base);
+@import "@blue-patterns/core/reset.css";
+@import "@blue-patterns/core/astryx.css";
+@import "@blue-patterns/theme-neutral/theme.css";
+@import "@blue-patterns/core/tailwind-theme.css";
+@import "tailwindcss/utilities.css" layer(utilities);

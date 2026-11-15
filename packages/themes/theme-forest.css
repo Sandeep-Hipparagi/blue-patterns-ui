@@ -1,0 +1,81 @@
+/**
+ * Blue-Patterns-UI Theme: Forest (Organic Deep-Green & Warm Sand Tokens)
+ */
+
+:root, [data-theme="forest"] {
+  color-scheme: light dark;
+
+  /* Surfaces & Canvas */
+  --color-surface-base: light-dark(#f7fee7, #052e16);
+  --color-surface-subtle: light-dark(#ecfccb, #0f3d24);
+  --color-surface-elevated: light-dark(#ffffff, #14532d);
+  --color-surface-sunken: light-dark(#d9f99d, #021c0d);
+
+  /* Text & Foreground */
+  --color-text-primary: light-dark(#14532d, #f0fdf4);
+  --color-text-secondary: light-dark(#365314, #bbf7d0);
+  --color-text-muted: light-dark(#4d7c0f, #86efac);
+  --color-text-inverted: light-dark(#ffffff, #052e16);
+
+  /* Primary Brand Intent: Deep Evergreen */
+  --color-primary-base: light-dark(#166534, #4ade80);
+  --color-primary-hover: light-dark(#14532d, #86efac);
+  --color-primary-active: light-dark(#052e16, #bbf7d0);
+  --color-primary-subtle: light-dark(#dcfce7, #052e16);
+  --color-primary-contrast: light-dark(#ffffff, #052e16);
+
+  /* Neutral Tone: Warm Sand & Earth */
+  --color-neutral-base: light-dark(#78716c, #a8a29e);
+  --color-neutral-subtle: light-dark(#f5f5f4, #1c1917);
+  --color-neutral-border: light-dark(#d6d3d1, #292524);
+  --color-neutral-contrast: light-dark(#ffffff, #052e16);
+
+  /* Semantic Feedback */
+  --color-success-base: light-dark(#15803d, #4ade80);
+  --color-success-subtle: light-dark(#dcfce7, #052e16);
+  --color-warning-base: light-dark(#b45309, #fbbf24);
+  --color-warning-subtle: light-dark(#fef3c7, #451a03);
+  --color-danger-base: light-dark(#b91c1c, #f87171);
+  --color-danger-subtle: light-dark(#fee2e2, #450a0a);
+  --color-info-base: light-dark(#0284c7, #38bdf8);
+  --color-info-subtle: light-dark(#e0f2fe, #082f49);
+
+  /* Spacing */
+  --spacing-0: 0px;
+  --spacing-1: 4px;
+  --spacing-2: 8px;
+  --spacing-3: 12px;
+  --spacing-4: 16px;
+  --spacing-5: 20px;
+  --spacing-6: 24px;
+  --spacing-8: 32px;
+  --spacing-10: 40px;
+  --spacing-12: 48px;
+
+  /* Natural Soft Radii */
+  --radius-xs: 3px;
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 18px;
+  --radius-full: 9999px;
+
+  /* Typography */
+  --typography-font-sans: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --typography-font-mono: ui-monospace, Menlo, Consolas, monospace;
+  --typography-size-xs: 0.75rem;
+  --typography-size-sm: 0.875rem;
+  --typography-size-md: 1rem;
+  --typography-size-lg: 1.125rem;
+  --typography-size-xl: 1.25rem;
+
+  /* Botanical Earth Tone Charts */
+  --color-chart-1: light-dark(#15803d, #4ade80);
+  --color-chart-2: light-dark(#65a30d, #a3e635);
+  --color-chart-3: light-dark(#d97706, #fbbf24);
+  --color-chart-4: light-dark(#0d9488, #2dd4bf);
+  --color-chart-5: light-dark(#b45309, #f59e0b);
+  --color-chart-6: light-dark(#047857, #34d399);
+  --color-chart-7: light-dark(#854d0e, #ca8a04);
+  --color-chart-8: light-dark(#166534, #86efac);
+}

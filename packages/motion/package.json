@@ -1,0 +1,40 @@
+{
+  "name": "@blue-patterns/motion",
+  "version": "0.1.0",
+  "description": "Zero-dependency spring physics, WAAPI micro-interactions, and View Transitions for Blue-Patterns-UI",
+  "author": "Blue-Patterns-UI Contributors",
+  "license": "MIT",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "publishConfig": {
+    "access": "public"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    },
+    "./motion.css": {
+      "default": "./motion.css"
+    }
+  },
+  "files": [
+    "dist",
+    "motion.css",
+    "README.md"
+  ],
+  "sideEffects": [
+    "**/*.css"
+  ],
+  "peerDependencies": {
+    "react": ">=19.0.0",
+    "react-dom": ">=19.0.0"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  }
+}

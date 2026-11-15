@@ -1,0 +1,30 @@
+{
+  "name": "@blue-patterns/mcp",
+  "version": "0.1.0",
+  "description": "Deterministic Model Context Protocol (MCP) server exposing Blue-Patterns-UI contracts, validation, and search to AI coding agents",
+  "author": "Blue-Patterns-UI Contributors",
+  "license": "MIT",
+  "type": "module",
+  "publishConfig": {
+    "access": "public"
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "bin": {
+    "blue-patterns-mcp": "./bin/mcp-server.js"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "start": "node bin/mcp-server.js",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "typescript": "^5.0.0 || ^6.0.0"
+  }
+}

@@ -1,0 +1,584 @@
+// Copyright (c) Meta Platforms, Inc. and affiliates.
+
+'use client';
+
+/**
+ * @file HeroThemeReel.tsx
+ * @input none (reads the generated theme registry via heroThemeContent)
+ * @output Provider, the swipe/hover surface, the pinned backdrop + cards rails,
+ *   and placed pieces (wordmark, collage, dots) consumed by page.tsx
+ * @position Home hero — orchestrates the per-theme reel behind the headline.
+ *
+ * The cycling state (active index + auto-advance clock) lives in HeroReelProvider
+ * so the wordmark, cards, and dots — placed in different parts of the DOM by
+ * page.tsx — re-skin together. Auto-advance pauses on hover/focus (inside
+ * HeroReelSwipeArea) and when the tab is hidden, and respects
+ * prefers-reduced-motion.
+ *
+ * Manual control: touch swipe (mobile) and the Pagination dots, which own
+ * keyboard navigation (arrow keys, Home/End) via the useListFocus primitive.
+ *
+ * Desktop pin-and-cover: the backdrop (fills + aurora glow) and the overlap
+ * cards each ride their own full-height rail (`styles.rail`, absolute against
+ * page.tsx's heroScope) as a `position: sticky` layer. Sticky, not fixed, is
+ * what bounds them to the document so the site never has to suppress native
+ * overscroll to hide them (#3032 → #5392 → #5470).
+ */
+
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+  type TouchEvent as ReactTouchEvent,
+} from 'react';
+import * as stylex from '@stylexjs/stylex';
+import type {StyleXStyles} from '@stylexjs/stylex';
+import {Theme} from '@blue-patterns/core/theme';
+import {Text} from '@blue-patterns/core/Text';
+import {Pagination} from '@blue-patterns/core/Pagination';
+import {useMediaQuery} from '@blue-patterns/core/hooks';
+import {useThemeMode} from '../../../providers';
+import {
+  HERO_THEME_SLIDES,
+  REEL_FONT_SPECIFIERS,
+  REEL_IMAGE_SRCS,
+  type HeroThemeSlide,
+} from './heroThemeContent';
+import {AstryxLogo} from '../../../../components/logos';
+import {HeroFloatingCards} from './HeroFloatingCards';
+
+// How long each theme stays on screen before auto-advancing (ms).
+const ADVANCE_INTERVAL_MS = 4500;
+
+// Auto-advance carousel master switch.
+const AUTOPLAY_ENABLED = true;
+
+interface HeroReelState {
+  slides: ReadonlyArray<HeroThemeSlide>;
+  index: number;
+  goTo: (i: number) => void;
+  /** Whether entrance/cycle animation should run (false under reduced-motion). */
+  animate: boolean;
+  setPaused: (paused: boolean) => void;
+  /**
+   * The docsite's color mode for theme rendering. 'system' on the first paint
+   * (before the OS preference resolves) so slides keep `color-scheme: light
+   * dark` and their light-dark() tokens follow the OS — no flash (#2713).
+   */
+  userMode: 'system' | 'light' | 'dark';
+}
+
+const HeroReelContext = createContext<HeroReelState | null>(null);
+
+function useHeroReel(): HeroReelState | null {
+  return useContext(HeroReelContext);
+}
+
+/**
+ * The color mode a slide should render in: dark-first themes (e.g. Gothic) are
+ * always dark; every other theme follows the docsite's color mode so the hero
+ * respects the user's light/dark toggle (and the OS preference via 'system'
+ * before that resolves).
+ */
+function effectiveMode(
+  slide: HeroThemeSlide,
+  userMode: 'system' | 'light' | 'dark',
+): 'system' | 'light' | 'dark' {
+  return slide.isDark ? 'dark' : userMode;
+}
+
+/**
+ * Whether the active hero slide should render with light text/nav. True when
+ * the slide is a dark-first theme (e.g. Gothic) OR the docsite is in dark mode —
+ * in both cases the hero sits on a dark body and its text/nav must go light.
+ * 'system' is treated as not-dark here: the light-text overrides only apply once
+ * the resolved dark mode is known, which avoids forcing light ink on a slide
+ * that may still paint its light scheme.
+ */
+export function useHeroReelIsDark(): boolean {
+  const reel = useContext(HeroReelContext);
+  if (!reel || reel.slides.length === 0) {
+    return false;
+  }
+  const active = reel.slides[reel.index];
+  if (!active) {
+    return false;
+  }
+  return effectiveMode(active, reel.userMode) === 'dark';
+}
+
+const styles = stylex.create({
+  // Centers the wordmark SVG; it paints with currentColor (set per-slide).
+  wordmarkWrap: {
+    position: 'relative',
+    zIndex: 1,
+    display: 'flex',
+    justifyContent: 'center',
+    transitionProperty: 'color',
+    transitionDuration: 'var(--duration-medium, 300ms)',
+    transitionTimingFunction: 'var(--ease-standard, ease)',
+  },
+  // Hero-scale wordmark, smaller on narrow screens.
+  wordmark: {
+    width: {
+      default: 'min(360px, 70%)',
+      '@media (min-width: 768px)': 'min(440px, 70%)',
+      '@media (min-width: 1024px)': 'min(520px, 70%)',
+    },
+    height: 'auto',
+  },
+  // Full-height rail for one pinned layer. Absolute against heroScope
+  // (page.tsx, position: relative), so it spans the hero band AND the
+  // showcase: a `position: sticky` child pins for the whole pin-and-cover, yet
+  // lifts with the document and can never paint past its own edge — which is
+  // what lets the site keep native overscroll instead of suppressing it
+  // (#5470). A rail inside the 760px band alone releases its layer after ~48px
+  // of scroll. Sticky also needs no scroll container between the rail and the
+  // viewport: AppShell's main area (core LayoutContent) is `overflow: clip` in
+  // auto-height shells, and `hidden` or `auto` there would silently un-pin
+  // every layer; home-hero-overscroll.test.ts guards that link. Decorative:
+  // never intercepts pointer events.
+  rail: {
+    position: 'absolute',
+    inset: 0,
+    pointerEvents: 'none',
+  },
+  // Per-slide body fill behind the hero (resolves to the active theme's body
+  // color). Covers the band + an extra strip so the color sits behind the
+  // showcase's rounded top corners (no notch showing the docsite body color).
+  //
+  // The extra MUST match the showcase overlay's corner radius, which is the
+  // docsite (Astryx) --radius-page = 32px. We can't read --radius-page here
+  // because this fill renders inside <Theme theme={active}>, where the
+  // active theme overrides it — e.g. Y2K sets --radius-page: 0, which left the
+  // fill 32px short and exposed the docsite body color in the rounded corners.
+  // Hence a fixed 32px tied to the overlay radius rather than the theme token.
+  themeFill: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: {
+      default: 'calc(var(--hero-content-height, 760px) + 32px)',
+      '@media (min-width: 1024px)': 'calc(760px + 32px)',
+    },
+    backgroundColor: 'var(--color-background-body)',
+    pointerEvents: 'none',
+    transition: 'background-color 600ms ease',
+  },
+  // Per-slide band behind the transparent top nav so it retints too.
+  navBackdrop: {
+    position: 'fixed',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 'var(--appshell-header-height, 64px)',
+    backgroundColor: 'var(--color-background-body)',
+    pointerEvents: 'none',
+    transition: 'background-color 600ms ease',
+    zIndex: 0,
+  },
+  // Blurred aurora glow — in the same 1200px box as the cards so blobs and
+  // cards stay aligned; pinned at >=1024px and scrolling away with the hero
+  // below that (see `position`). Capped to the rail's width (see the stage).
+  // Blob centers sit under the card clusters; colors come from --aurora-* per
+  // slide.
+  backdropGlow: {
+    // Desktop: sticky inside its rail, part of the pin-and-cover effect
+    // alongside heroContent and the cards stage; sticky rather than fixed so
+    // it lifts with the document and cannot bleed into an overscroll gap
+    // (#5470). Narrow: absolute within the rail, so it scrolls away with the
+    // hero instead of staying pinned for the whole page. A fixed glow below
+    // 1024px reached past the footer into the bottom-overscroll gap; that
+    // exposure is what the app-global `overscroll-behavior-y: none` in
+    // globals.css was suppressing, at the cost of pull-to-refresh on every
+    // route on mobile. Bounding the glow is what let that rule scope to
+    // desktop widths (#5392); the sticky rails are what let it go entirely
+    // (#5470).
+    position: {
+      default: 'absolute',
+      '@media (min-width: 1024px)': 'sticky',
+    },
+    // The rail starts where heroScope does, below the header, so the absolute
+    // case needs no offset; the sticky case pins under the header.
+    top: {
+      default: 0,
+      '@media (min-width: 1024px)': 'var(--appshell-header-height, 0px)',
+    },
+    // Centered by auto margins in the full-width rail. The old
+    // `left: 50%; translateX(-50%)` can't survive the move: on a sticky box
+    // `left` is an inset, not an offset. The absolute case needs both inline
+    // insets set for the auto margins to resolve.
+    insetInline: {
+      default: 0,
+      '@media (min-width: 1024px)': 'auto',
+    },
+    marginInline: 'auto',
+    width: 'min(1200px, 100%)',
+    height: 1050,
+    pointerEvents: 'none',
+    opacity: 0.7,
+    transition: 'background-image 800ms ease',
+    filter: 'blur(60px)',
+    backgroundImage:
+      'radial-gradient(circle 220px at 5% 75%, var(--aurora-left), var(--aurora-left) 90%, transparent 100%), ' +
+      'radial-gradient(circle 200px at 72% 85%, var(--aurora-center), var(--aurora-center) 90%, transparent 100%), ' +
+      'radial-gradient(circle 260px at 92% 65%, var(--aurora-right), var(--aurora-right) 90%, transparent 100%)',
+    // Visible at all widths (behind the collage on narrow + overlap on desktop).
+    display: 'block',
+  },
+  // Centers the pagination dots with breathing room above.
+  dots: {
+    display: 'flex',
+    justifyContent: 'center',
+    marginBlockStart: 'var(--spacing-6)',
+  },
+  srOnly: {
+    position: 'absolute',
+    width: 1,
+    height: 1,
+    padding: 0,
+    margin: -1,
+    overflow: 'hidden',
+    clip: 'rect(0, 0, 0, 0)',
+    whiteSpace: 'nowrap',
+    borderWidth: 0,
+  },
+  // pan-y so a horizontal swipe goes to our handler, not page side-pan.
+  swipeArea: {
+    touchAction: 'pan-y',
+  },
+});
+
+// Dynamic per-theme values via stylex.create functions (no inline styles).
+const dynamic = stylex.create({
+  wordmarkColor: (color: string) => ({color}),
+  aurora: (left: string, center: string, right: string) => ({
+    '--aurora-left': left,
+    '--aurora-center': center,
+    '--aurora-right': right,
+  }),
+});
+
+/**
+ * Owns the cycling state + auto-advance clock and exposes them via context.
+ * Renders no DOM of its own — HeroReelSwipeArea is the hover/focus/touch
+ * surface — so the pinned rails and the hero text can all be direct children
+ * of page.tsx's heroScope while sharing one reel.
+ */
+export function HeroReelProvider({children}: {children: ReactNode}) {
+  const slides = HERO_THEME_SLIDES;
+  const [index, setIndex] = useState(0);
+  const [paused, setPaused] = useState(false);
+  const reduceMotion = useMediaQuery('(prefers-reduced-motion: reduce)');
+  // Auto-advance is desktop-only; on mobile the reel stays manual (swipe + dots)
+  // so the cards don't move on their own while the user reads/scrolls.
+  const isNarrow = useMediaQuery('(max-width: 1023px)');
+  const {themeMode: userMode} = useThemeMode();
+
+  const goTo = useCallback(
+    (next: number) => {
+      const count = slides.length;
+      if (count === 0) {
+        return;
+      }
+      setIndex(((next % count) + count) % count);
+    },
+    [slides.length],
+  );
+
+  useEffect(() => {
+    if (
+      !AUTOPLAY_ENABLED ||
+      reduceMotion ||
+      isNarrow ||
+      paused ||
+      slides.length <= 1
+    ) {
+      return;
+    }
+    const id = window.setInterval(() => {
+      setIndex(i => (i + 1) % slides.length);
+    }, ADVANCE_INTERVAL_MS);
+    return () => window.clearInterval(id);
+  }, [reduceMotion, isNarrow, paused, slides.length]);
+
+  useEffect(() => {
+    const onVisibility = () => setPaused(document.hidden);
+    document.addEventListener('visibilitychange', onVisibility);
+    return () => document.removeEventListener('visibilitychange', onVisibility);
+  }, []);
+
+  // Warm the reel's per-theme assets once, after first paint, so first-time
+  // visitors don't see fonts flash (FOUT) and product photos pop in as the reel
+  // auto-advances. The @font-face rules ship in the docsite's Google Fonts
+  // <link>, but a family's woff2 is only fetched when a glyph using it first
+  // paints — and the remote card photos aren't fetched until their slide
+  // renders; both happen mid-swap on a cold cache. Kicking the fetches off here
+  // (off the critical path, scoped to just the reel's ~9 fonts and photos) gets
+  // them into cache before the first 4.5s advance without touching initial LCP.
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return;
+    }
+    // Defer to idle time so warming never competes with first paint / LCP.
+    const schedule =
+      window.requestIdleCallback?.bind(window) ??
+      ((cb: () => void) => window.setTimeout(cb, 200));
+    const cancel =
+      window.cancelIdleCallback?.bind(window) ?? window.clearTimeout;
+
+    const handle = schedule(() => {
+      // Fonts: ask the CSS Font Loading API to load each reel family. This pulls
+      // the woff2 the @font-face rule points at without us hardcoding gstatic's
+      // hashed URLs (which rotate). Failures (e.g. a family not in the sheet)
+      // are non-fatal — the slide just paints its fallback as it does today.
+      if (typeof document !== 'undefined' && document.fonts?.load) {
+        for (const spec of REEL_FONT_SPECIFIERS) {
+          document.fonts.load(spec).catch(() => {});
+        }
+      }
+      // Images: prime the browser cache with the reel's product photos so they
+      // are decoded by the time their slide swaps in.
+      for (const src of REEL_IMAGE_SRCS) {
+        const img = new Image();
+        img.decoding = 'async';
+        img.src = src;
+      }
+    });
+
+    return () => cancel(handle as never);
+  }, []);
+
+  const value = useMemo<HeroReelState>(
+    () => ({slides, index, goTo, animate: !reduceMotion, setPaused, userMode}),
+    [slides, index, goTo, reduceMotion, userMode],
+  );
+
+  return <HeroReelContext value={value}>{children}</HeroReelContext>;
+}
+
+// A horizontal touch travel shorter than this is a tap or a scroll, not a swipe.
+const SWIPE_THRESHOLD_PX = 45;
+
+/**
+ * The reel's interaction surface: hover or focus inside pauses auto-advance,
+ * and a horizontal touch swipe steps the reel (left → next, right → previous).
+ * Wraps the hero text block — CTAs, dots and the narrow-screen collage — and
+ * page.tsx also makes it the hero text's full-height rail, so on desktop the
+ * band and its gutters pause the reel exactly as the old provider wrapper did.
+ */
+export function HeroReelSwipeArea({
+  children,
+  xstyle,
+}: {
+  children: ReactNode;
+  xstyle?: StyleXStyles;
+}) {
+  const reel = useHeroReel();
+  const setPaused = reel?.setPaused;
+
+  const touchStart = useRef<{x: number; y: number} | null>(null);
+  const onTouchStart = useCallback(
+    (e: ReactTouchEvent) => {
+      const t = e.touches[0];
+      if (!t) {
+        return;
+      }
+      touchStart.current = {x: t.clientX, y: t.clientY};
+      // Touch devices have no hover, so pause auto-advance while the finger is down.
+      setPaused?.(true);
+    },
+    [setPaused],
+  );
+  const onTouchEnd = useCallback(
+    (e: ReactTouchEvent) => {
+      setPaused?.(false);
+      const start = touchStart.current;
+      touchStart.current = null;
+      if (!start || !reel || reel.slides.length <= 1) {
+        return;
+      }
+      const t = e.changedTouches[0];
+      if (!t) {
+        return;
+      }
+      const dx = t.clientX - start.x;
+      const dy = t.clientY - start.y;
+      // Only a mostly-horizontal gesture counts, so vertical scroll isn't a swipe.
+      if (Math.abs(dx) < SWIPE_THRESHOLD_PX || Math.abs(dx) <= Math.abs(dy)) {
+        return;
+      }
+      reel.goTo(reel.index + (dx < 0 ? 1 : -1));
+    },
+    [reel, setPaused],
+  );
+
+  return (
+    <div
+      {...stylex.props(styles.swipeArea, xstyle)}
+      onMouseEnter={() => setPaused?.(true)}
+      onMouseLeave={() => setPaused?.(false)}
+      onFocusCapture={() => setPaused?.(true)}
+      onBlurCapture={() => setPaused?.(false)}
+      onTouchStart={onTouchStart}
+      onTouchEnd={onTouchEnd}>
+      {children}
+    </div>
+  );
+}
+
+/** Themed, recolorable Astryx wordmark for the centered content column. */
+export function HeroReelWordmark() {
+  const reel = useHeroReel();
+
+  if (!reel || reel.slides.length === 0) {
+    // Fallback: render the static brand wordmark in the default accent so the
+    // hero still has a brand mark even if no themes are registered.
+    return (
+      <div
+        {...stylex.props(
+          styles.wordmarkWrap,
+          dynamic.wordmarkColor('var(--color-text-accent)'),
+        )}>
+        <AstryxLogo
+          role="img"
+          aria-label="Astryx"
+          className={stylex.props(styles.wordmark).className}
+        />
+      </div>
+    );
+  }
+
+  const active = reel.slides[reel.index];
+  return (
+    <Theme theme={active.theme} mode={effectiveMode(active, reel.userMode)}>
+      <div
+        {...stylex.props(
+          styles.wordmarkWrap,
+          dynamic.wordmarkColor(active.wordmarkColor),
+        )}>
+        <AstryxLogo
+          role="img"
+          aria-label="Astryx"
+          className={stylex.props(styles.wordmark).className}
+        />
+      </div>
+    </Theme>
+  );
+}
+
+/**
+ * The backdrop rail: the per-slide body fill, the nav retint strip and the
+ * aurora glow. First of the pinned rails in page.tsx, so it paints under the
+ * cards and the hero text.
+ */
+export function HeroReelBackdrop() {
+  const reel = useHeroReel();
+  if (!reel || reel.slides.length === 0) {
+    return null;
+  }
+
+  const active = reel.slides[reel.index];
+  return (
+    <div {...stylex.props(styles.rail)}>
+      <Theme theme={active.theme} mode={effectiveMode(active, reel.userMode)}>
+        <div {...stylex.props(styles.themeFill)} aria-hidden="true" />
+        <div {...stylex.props(styles.navBackdrop)} aria-hidden="true" />
+        <div
+          aria-hidden="true"
+          {...stylex.props(
+            styles.backdropGlow,
+            dynamic.aurora(
+              active.aurora.left,
+              active.aurora.center,
+              active.aurora.right,
+            ),
+          )}
+        />
+      </Theme>
+    </div>
+  );
+}
+
+/** The cards rail: full-bleed floating cards for the hero gutters. */
+export function HeroReelCards() {
+  const reel = useHeroReel();
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!reel || reel.slides.length === 0) {
+    return null;
+  }
+
+  const active = reel.slides[reel.index];
+  // Entrance animation only runs when motion is allowed; otherwise cards are
+  // shown in their resting pose immediately.
+  const shown = reel.animate ? mounted : true;
+
+  return (
+    <div {...stylex.props(styles.rail)}>
+      <Theme theme={active.theme} mode={effectiveMode(active, reel.userMode)}>
+        <HeroFloatingCards content={active.content} mounted={shown} />
+      </Theme>
+    </div>
+  );
+}
+
+/**
+ * Narrow-screen (collage) variant of the hero cards, placed after the hero text
+ * in page.tsx. Self-hides at ≥1024px, where HeroReelCards (overlap) takes over.
+ */
+export function HeroReelStack() {
+  const reel = useHeroReel();
+  if (!reel || reel.slides.length === 0) {
+    return null;
+  }
+  const active = reel.slides[reel.index];
+  return (
+    <Theme theme={active.theme} mode={effectiveMode(active, reel.userMode)}>
+      <HeroFloatingCards content={active.content} mounted layout="stack" />
+    </Theme>
+  );
+}
+
+/** Dot controls + a polite live region announcing the active theme. */
+export function HeroReelDots() {
+  const reel = useHeroReel();
+  if (!reel || reel.slides.length <= 1) {
+    return null;
+  }
+  const {slides, index, goTo} = reel;
+  const active = slides[index];
+
+  return (
+    <>
+      {/* Real Pagination (dots variant). It's 1-indexed, so page = index+1.
+          The prev/next chevrons it ships with are hidden on the home page via
+          a [data-home-page] CSS rule in globals.css, leaving just the dots. */}
+      <div {...stylex.props(styles.dots)}>
+        <Pagination
+          variant="dots"
+          label="Preview Astryx themes"
+          page={index + 1}
+          totalPages={slides.length}
+          onChange={p => goTo(p - 1)}
+        />
+      </div>
+      <Text
+        as="span"
+        type="supporting"
+        aria-live="polite"
+        xstyle={styles.srOnly}>
+        {active.label} theme
+      </Text>
+    </>
+  );
+}

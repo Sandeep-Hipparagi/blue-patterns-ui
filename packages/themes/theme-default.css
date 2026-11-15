@@ -1,0 +1,81 @@
+/**
+ * Blue-Patterns-UI Theme: Default (Balanced Neutral Baseline)
+ */
+
+:root, [data-theme="default"] {
+  color-scheme: light dark;
+
+  /* Surfaces & Canvas */
+  --color-surface-base: light-dark(#ffffff, #0f172a);
+  --color-surface-subtle: light-dark(#f8fafc, #1e293b);
+  --color-surface-elevated: light-dark(#ffffff, #334155);
+  --color-surface-sunken: light-dark(#f1f5f9, #020617);
+
+  /* Text & Foreground */
+  --color-text-primary: light-dark(#0f172a, #f8fafc);
+  --color-text-secondary: light-dark(#334155, #cbd5e1);
+  --color-text-muted: light-dark(#475569, #94a3b8);
+  --color-text-inverted: light-dark(#ffffff, #0f172a);
+
+  /* Primary Brand Intent (4.5:1+ WCAG AA Compliant) */
+  --color-primary-base: light-dark(#0369a1, #38bdf8);
+  --color-primary-hover: light-dark(#075985, #7dd3fc);
+  --color-primary-active: light-dark(#0c4a6e, #bae6fd);
+  --color-primary-subtle: light-dark(#e0f2fe, #082f49);
+  --color-primary-contrast: light-dark(#ffffff, #082f49);
+
+  /* Neutral Tone */
+  --color-neutral-base: light-dark(#64748b, #94a3b8);
+  --color-neutral-subtle: light-dark(#f1f5f9, #1e293b);
+  --color-neutral-border: light-dark(#e2e8f0, #334155);
+  --color-neutral-contrast: light-dark(#ffffff, #0f172a);
+
+  /* Semantic Feedback */
+  --color-success-base: light-dark(#16a34a, #4ade80);
+  --color-success-subtle: light-dark(#dcfce7, #052e16);
+  --color-warning-base: light-dark(#d97706, #fbbf24);
+  --color-warning-subtle: light-dark(#fef3c7, #451a03);
+  --color-danger-base: light-dark(#dc2626, #f87171);
+  --color-danger-subtle: light-dark(#fee2e2, #450a0a);
+  --color-info-base: light-dark(#1d4ed8, #93c5fd);
+  --color-info-subtle: light-dark(#eff6ff, #172554);
+
+  /* Standard Spacing Scale */
+  --spacing-0: 0px;
+  --spacing-1: 4px;
+  --spacing-2: 8px;
+  --spacing-3: 12px;
+  --spacing-4: 16px;
+  --spacing-5: 20px;
+  --spacing-6: 24px;
+  --spacing-8: 32px;
+  --spacing-10: 40px;
+  --spacing-12: 48px;
+
+  /* Radii Scale */
+  --radius-xs: 2px;
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --radius-full: 9999px;
+
+  /* Typography */
+  --typography-font-sans: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --typography-font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  --typography-size-xs: 0.75rem;
+  --typography-size-sm: 0.875rem;
+  --typography-size-md: 1rem;
+  --typography-size-lg: 1.125rem;
+  --typography-size-xl: 1.25rem;
+
+  /* Charts 1-8 Token Palette */
+  --color-chart-1: light-dark(#0284c7, #38bdf8);
+  --color-chart-2: light-dark(#10b981, #34d399);
+  --color-chart-3: light-dark(#f59e0b, #fbbf24);
+  --color-chart-4: light-dark(#8b5cf6, #a78bfa);
+  --color-chart-5: light-dark(#ec4899, #f472b6);
+  --color-chart-6: light-dark(#06b6d4, #22d3ee);
+  --color-chart-7: light-dark(#84cc16, #a3e635);
+  --color-chart-8: light-dark(#f97316, #fb923c);
+}

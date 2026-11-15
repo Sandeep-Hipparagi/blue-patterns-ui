@@ -1,0 +1,45 @@
+Blue-Patterns-UI
+Copyright (c) 2026 Blue-Patterns-UI Contributors
+
+This product includes software developed by Meta Platforms, Inc. as part of Astryx (https://github.com/meta/astryx), licensed under the MIT License:
+
+Copyright (c) 2026 Meta Platforms, Inc.
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+---
+
+### Custom Extensions & Architectural Enhancements
+
+Blue-Patterns-UI significantly extends and specializes the upstream Astryx foundation with the following first-class capabilities:
+
+1. **Spring Motion Engine (`packages/motion`):**
+   A zero-runtime-dependency physics animation system generating CSS-native spring keyframes and transitions guarded by `@media (prefers-reduced-motion: no-preference)`.
+
+2. **Stabilized Charts (`packages/charts`):**
+   High-performance SVG and Canvas-based data visualization primitives themed completely through `--color-chart-*` CSS custom properties, featuring built-in accessible data tables and screen reader narration.
+
+3. **Multi-Brand Theme Packs (`packages/themes`):**
+   Enterprise-ready multi-brand theming architecture supporting seamless light/dark/high-contrast modes, dynamic theme switching, and strict CSS custom property token definitions.
+
+4. **Model Context Protocol Server (`packages/mcp`):**
+   Agentic MCP server exposing component documentation contracts, dense tokens, component ASTs, and automated verification tools to AI coding agents.
+
+5. **REA Reverse-Engineering Analyzer & Verification Bridge (`rea`):**
+   Integrated low-latency tooling and inspection bridge for deep runtime validation, contract parity verification, and performance benchmarking.

@@ -1,0 +1,131 @@
+{
+  "apiVersion": 1,
+  "type": "discover.list",
+  "data": [
+    {
+      "name": "@acme/glyphs",
+      "package": "@acme/glyphs",
+      "category": "@acme/glyphs",
+      "components": [],
+      "version": "1.0.0"
+    }
+  ],
+  "meta": {
+    "available": [
+      {
+        "name": "@blue-patterns/richtext",
+        "package": "@blue-patterns/richtext",
+        "components": [
+          "RichTextEditor",
+          "RichTextEditorAutoLinkPlugin",
+          "RichTextEditorToolbar",
+          "RichTextView"
+        ],
+        "version": "<version>",
+        "description": "Astryx rich text — a Lexical-based rich text editor and viewer, styled with Astryx design tokens.",
+        "templates": [
+          "RichTextEditorShowcase"
+        ],
+        "source": "Astryx",
+        "install": "pnpm add @blue-patterns/richtext@<version>"
+      },
+      {
+        "name": "@blue-patterns/theme-butter",
+        "package": "@blue-patterns/theme-butter",
+        "components": [],
+        "version": "<version>",
+        "description": "Warm, creamy yellows with a friendly blue accent. Playful enough for consumer surfaces, soft enough to stay readable.",
+        "themes": [
+          "butter"
+        ],
+        "source": "Astryx",
+        "install": "pnpm add @blue-patterns/theme-butter@<version>"
+      },
+      {
+        "name": "@blue-patterns/theme-chocolate",
+        "package": "@blue-patterns/theme-chocolate",
+        "components": [],
+        "version": "<version>",
+        "description": "Warm chocolate theme for Astryx — rich brown palette with Fraunces headings, Albert Sans body, and Lucide icons",
+        "themes": [
+          "chocolate"
+        ],
+        "source": "Astryx",
+        "install": "pnpm add @blue-patterns/theme-chocolate@<version>"
+      },
+      {
+        "name": "@blue-patterns/theme-gothic",
+        "package": "@blue-patterns/theme-gothic",
+        "components": [],
+        "version": "<version>",
+        "description": "Deep blue-grays and a signature display serif. Dramatic and editorial, for surfaces that want to be remembered.",
+        "themes": [
+          "gothic"
+        ],
+        "source": "Astryx",
+        "install": "pnpm add @blue-patterns/theme-gothic@<version>"
+      },
+      {
+        "name": "@blue-patterns/theme-matcha",
+        "package": "@blue-patterns/theme-matcha",
+        "components": [],
+        "version": "<version>",
+        "description": "Earthy greens with a calm, organic feel. Naturalistic and grounded, great for wellness or content-first apps.",
+        "themes": [
+          "matcha"
+        ],
+        "source": "Astryx",
+        "install": "pnpm add @blue-patterns/theme-matcha@<version>"
+      },
+      {
+        "name": "@blue-patterns/theme-neutral",
+        "package": "@blue-patterns/theme-neutral",
+        "components": [],
+        "version": "<version>",
+        "description": "Restrained warm grays. Minimal and quiet, so the content stays the focus.",
+        "themes": [
+          "neutral"
+        ],
+        "source": "Astryx",
+        "install": "pnpm add @blue-patterns/theme-neutral@<version>"
+      },
+      {
+        "name": "@blue-patterns/theme-stone",
+        "package": "@blue-patterns/theme-stone",
+        "components": [],
+        "version": "<version>",
+        "description": "Warm stone and slate, earthy and understated, with just enough character to feel handcrafted.",
+        "themes": [
+          "stone"
+        ],
+        "source": "Astryx",
+        "install": "pnpm add @blue-patterns/theme-stone@<version>"
+      },
+      {
+        "name": "@blue-patterns/theme-y2k",
+        "package": "@blue-patterns/theme-y2k",
+        "components": [],
+        "version": "<version>",
+        "description": "Hot pinks, lime greens, and Poppins. Bubbly, playful, and unmistakably retro.",
+        "themes": [
+          "y2k"
+        ],
+        "source": "Astryx",
+        "install": "pnpm add @blue-patterns/theme-y2k@<version>"
+      }
+    ],
+    "sources": [
+      {
+        "name": "Astryx",
+        "from": "@blue-patterns/cli",
+        "status": "fresh",
+        "complete": true
+      }
+    ],
+    "answeredBy": {
+      "cli": "<version>",
+      "core": "<version>",
+      "copy": "project"
+    }
+  }
+}

@@ -1,0 +1,81 @@
+/**
+ * Blue-Patterns-UI Theme: Obsidian (High-Contrast Developer Dark-First Palette)
+ */
+
+:root, [data-theme="obsidian"] {
+  color-scheme: dark;
+
+  /* Surfaces & Canvas */
+  --color-surface-base: #090a0f;
+  --color-surface-subtle: #12131c;
+  --color-surface-elevated: #1a1c29;
+  --color-surface-sunken: #040508;
+
+  /* Text & Foreground */
+  --color-text-primary: #f8fafc;
+  --color-text-secondary: #94a3b8;
+  --color-text-muted: #64748b;
+  --color-text-inverted: #090a0f;
+
+  /* Primary Brand Intent: Cyber Violet */
+  --color-primary-base: #818cf8;
+  --color-primary-hover: #a5b4fc;
+  --color-primary-active: #c7d2fe;
+  --color-primary-subtle: #1e1b4b;
+  --color-primary-contrast: #0f172a;
+
+  /* Neutral Tone */
+  --color-neutral-base: #94a3b8;
+  --color-neutral-subtle: #1e2030;
+  --color-neutral-border: #2e324a;
+  --color-neutral-contrast: #090a0f;
+
+  /* Semantic Feedback */
+  --color-success-base: #34d399;
+  --color-success-subtle: #064e3b;
+  --color-warning-base: #fbbf24;
+  --color-warning-subtle: #78350f;
+  --color-danger-base: #f87171;
+  --color-danger-subtle: #7f1d1d;
+  --color-info-base: #7dd3fc;
+  --color-info-subtle: #082f49;
+
+  /* Spacing Scale */
+  --spacing-0: 0px;
+  --spacing-1: 4px;
+  --spacing-2: 8px;
+  --spacing-3: 12px;
+  --spacing-4: 16px;
+  --spacing-5: 20px;
+  --spacing-6: 24px;
+  --spacing-8: 32px;
+  --spacing-10: 40px;
+  --spacing-12: 48px;
+
+  /* Radii Scale */
+  --radius-xs: 2px;
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --radius-xl: 12px;
+  --radius-full: 9999px;
+
+  /* Typography */
+  --typography-font-sans: 'JetBrains Mono', 'Fira Code', ui-monospace, Menlo, Consolas, monospace;
+  --typography-font-mono: 'JetBrains Mono', 'Fira Code', ui-monospace, Menlo, Consolas, monospace;
+  --typography-size-xs: 0.75rem;
+  --typography-size-sm: 0.875rem;
+  --typography-size-md: 1rem;
+  --typography-size-lg: 1.125rem;
+  --typography-size-xl: 1.25rem;
+
+  /* Neon Glow Charts 1-8 Token Palette */
+  --color-chart-1: #818cf8;
+  --color-chart-2: #2dd4bf;
+  --color-chart-3: #f43f5e;
+  --color-chart-4: #fbbf24;
+  --color-chart-5: #38bdf8;
+  --color-chart-6: #a855f7;
+  --color-chart-7: #4ade80;
+  --color-chart-8: #fb923c;
+}

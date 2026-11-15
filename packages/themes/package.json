@@ -1,0 +1,25 @@
+{
+  "name": "@blue-patterns/themes",
+  "version": "0.1.0",
+  "description": "8 Ready-to-import theme packs with light-dark() CSS variables for Blue-Patterns-UI",
+  "author": "Blue-Patterns-UI Contributors",
+  "license": "MIT",
+  "type": "module",
+  "publishConfig": {
+    "access": "public"
+  },
+  "exports": {
+    "./theme-default.css": "./theme-default.css",
+    "./theme-obsidian.css": "./theme-obsidian.css",
+    "./theme-editorial.css": "./theme-editorial.css",
+    "./theme-enterprise.css": "./theme-enterprise.css",
+    "./theme-glass.css": "./theme-glass.css",
+    "./theme-forest.css": "./theme-forest.css",
+    "./theme-cobalt.css": "./theme-cobalt.css",
+    "./theme-high-contrast.css": "./theme-high-contrast.css",
+    "./*": "./*"
+  },
+  "sideEffects": [
+    "**/*.css"
+  ]
+}

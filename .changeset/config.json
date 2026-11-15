@@ -1,0 +1,37 @@
+{
+  "$schema": "https://unpkg.com/@changesets/config@3.0.0/schema.json",
+  "changelog": "./changelog.cjs",
+  "commit": false,
+  "fixed": [
+    [
+      "@blue-patterns/core",
+      "@blue-patterns/motion",
+      "@blue-patterns/charts",
+      "@blue-patterns/themes",
+      "@blue-patterns/cli",
+      "@blue-patterns/mcp",
+      "@blue-patterns/build"
+    ]
+  ],
+  "linked": [],
+  "access": "public",
+  "baseBranch": "main",
+  "updateInternalDependencies": "patch",
+  "ignore": [
+    "@blue-patterns/studio",
+    "@blue-patterns/docsite",
+    "@blue-patterns/sandbox",
+    "@blue-patterns/storybook",
+    "@blue-patterns/template-viewer",
+    "@blue-patterns/a11y-spec",
+    "@astryx/eslint-plugin",
+    "@blue-patterns/interaction-harness",
+    "@blue-patterns/test-utils",
+    "@blue-patterns/vibe-tests",
+    "@blue-patterns/lab",
+    "@blue-patterns/native",
+    "@blue-patterns/vega",
+    "@blue-patterns/theme-probe"
+  ],
+  "bumpVersionsWithWorkspaceProtocolOnly": true
+}

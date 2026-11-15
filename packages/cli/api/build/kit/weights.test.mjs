@@ -1,0 +1,620 @@
+// Copyright (c) Meta Platforms, Inc. and affiliates.
+
+import {describe, expect, it} from 'vitest';
+
+import {isWeightsFile} from '../_adapter.mjs';
+import {SHELL, blendOrder, stem, weighStart, weightWords} from './weights.mjs';
+
+// A made-up table for tests only: three page templates and the app shell.
+const CANDIDATES = [SHELL, 'board', 'charts', 'grid'];
+
+/**
+ * @param {Record<string, number[]>} weights per word, one value per candidate
+ * @param {number[]} [bias]
+ * @param {number} [step]
+ * @param {number} [clip]
+ */
+function table(weights, bias = [0, 0, 0, 0], step = 0.5, clip = 4) {
+  return {
+    words: Object.keys(weights),
+    bias,
+    clip,
+    step,
+    rows: Object.values(weights).map(ws =>
+      ws
+        .map(w => String.fromCharCode(97 + Math.round((w + clip) / step)))
+        .join(''),
+    ),
+  };
+}
+
+const WEIGHTS = {
+  version: 1,
+  candidates: CANDIDATES,
+  tables: [
+    table({
+      [stem('kanban')]: [0, 3, 0, 0],
+      [stem('existing')]: [3, 0, 0, 0],
+      [stem('charts')]: [0, 0, 2, 0],
+    }),
+    table({[stem('cards')]: [0, 0, 0, 1]}, [0, 0, 0, 0], 1, 4),
+  ],
+  // three numbers per member (table 1, the ranker, table 2), then one for SHELL
+  blend: [1, 0, 0, 0.5, 0, 0, 0.2, 0, 0, 0],
+};
+const CATALOG = [
+  {name: 'board'},
+  {name: 'charts'},
+  {name: 'grid'},
+  {name: 'top-nav'},
+];
+
+/**
+ * @param {string} name
+ * @param {number} score
+ * @param {string} family
+ */
+const page = (name, score, family) => ({
+  name,
+  score,
+  hits: 1,
+  family,
+  base: true,
+  familyNamed: false,
+  containerMatched: false,
+  matched: new Set(),
+  typical: 0,
+});
+/** A ranker output that prefers `charts`. */
+const RANKED = [
+  page('charts', 3, 'Charts'),
+  page('grid', 1, 'Grid'),
+  page('board', 0.5, 'Board'),
+  page('top-nav', 0, 'Shell'),
+];
+
+describe('the pick model', () => {
+  // The pick model reads "grid" for "cards"; the call model reads "charts".
+  const PICK = {
+    tables: [table({[stem('cards')]: [0, 0, 0, 3]})],
+    blend: [1, 0, 0, 0.5, 0, 0, 0],
+  };
+
+  it('chooses which page starts once the call model calls a page', () => {
+    const start = weighStart('charts and cards', RANKED, RANKED[0], CATALOG, {
+      weights: {...WEIGHTS, pick: PICK},
+    });
+    expect(start).toBe('grid');
+  });
+
+  it('chooses the listed page an unlisted pick is weighed against', () => {
+    // The tables do not list gauge-fleet; the idea names none of its words,
+    // so the best listed page starts: the pick model's (grid), not the call
+    // model's (charts).
+    const catalog = [
+      {name: 'board', displayName: 'Board'},
+      {name: 'charts', displayName: 'Charts'},
+      {name: 'grid', displayName: 'Grid'},
+      {name: 'gauge-fleet', displayName: 'Fleet Gauges'},
+    ];
+    const ranked = [page('gauge-fleet', 9, 'Gauges'), ...RANKED];
+    const idea = 'a grid of charts and cards';
+    expect(
+      weighStart(idea, ranked, ranked[0], catalog, {weights: WEIGHTS}),
+    ).toBe('charts');
+    expect(
+      weighStart(idea, ranked, ranked[0], catalog, {
+        weights: {...WEIGHTS, pick: PICK},
+      }),
+    ).toBe('grid');
+  });
+
+  it('never turns the app shell into a page', () => {
+    const start = weighStart(
+      'tweak the existing cards',
+      RANKED,
+      null,
+      CATALOG,
+      {
+        weights: {...WEIGHTS, pick: PICK},
+      },
+    );
+    expect(start).toBeNull();
+  });
+
+  it.each([
+    ['a blend of the wrong length', {...PICK, blend: [1]}],
+    [
+      'a bias that is not a number',
+      {
+        ...PICK,
+        tables: [{...PICK.tables[0], bias: PICK.tables[0].bias.map(() => 'x')}],
+      },
+    ],
+  ])('is ignored when it has %s', (_, pick) => {
+    const start = weighStart('charts and cards', RANKED, RANKED[0], CATALOG, {
+      weights: {...WEIGHTS, pick},
+    });
+    expect(start).toBe(
+      weighStart('charts and cards', RANKED, RANKED[0], CATALOG, {
+        weights: WEIGHTS,
+      }),
+    );
+  });
+});
+
+describe('weighStart', () => {
+  it('lets the word weights outvote the ranker', () => {
+    const start = weighStart(
+      'a kanban for launches',
+      RANKED,
+      RANKED[0],
+      CATALOG,
+      {
+        weights: WEIGHTS,
+      },
+    );
+    expect(start).toBe('board');
+  });
+
+  it('keeps the ranker when the words carry no weight', () => {
+    const start = weighStart('something else', RANKED, RANKED[0], CATALOG, {
+      weights: WEIGHTS,
+    });
+    expect(start).toBe('charts');
+  });
+
+  it('returns null for the app shell', () => {
+    const start = weighStart('tweak the existing page', RANKED, null, CATALOG, {
+      weights: WEIGHTS,
+    });
+    expect(start).toBeNull();
+  });
+
+  it('returns undefined without weights, so the ranker decides', () => {
+    const start = weighStart('a kanban', RANKED, RANKED[0], CATALOG, {
+      weights: null,
+    });
+    expect(start).toBeUndefined();
+  });
+
+  it('never starts from a template the project does not have', () => {
+    const catalog = CATALOG.filter(t => t.name !== 'board');
+    const ranked = RANKED.filter(r => r.name !== 'board');
+    const start = weighStart('a kanban', ranked, ranked[0], catalog, {
+      weights: WEIGHTS,
+    });
+    expect(start).not.toBe('board');
+  });
+
+  it("keeps the ranker's pick of a template the tables do not list", () => {
+    const catalog = [...CATALOG, {name: 'fresh'}];
+    const ranked = [page('fresh', 9, 'Fresh'), ...RANKED];
+    const start = weighStart('a kanban', ranked, ranked[0], catalog, {
+      weights: WEIGHTS,
+    });
+    expect(start).toBe('fresh');
+  });
+
+  describe('an exact tie among templates the tables do not list', () => {
+    // Two made-up templates of one family that the ranker scores the same.
+    // Only their own descriptors tell them apart.
+    const catalog = [
+      ...CATALOG,
+      {
+        name: 'list-alpha',
+        displayName: 'Plain List',
+        category: 'Lists - Plain',
+        description: 'A plain list of records.',
+      },
+      {
+        name: 'list-pane',
+        displayName: 'List with Reading Pane',
+        category: 'Lists - Pane',
+        description: 'A list of records with a reading pane beside it.',
+        keywords: ['reading pane'],
+      },
+    ];
+    const tied = [
+      page('list-alpha', 5, 'Lists'),
+      page('list-pane', 5, 'Lists'),
+      ...RANKED,
+    ];
+
+    it('starts from the tied template whose descriptor names the idea', () => {
+      const start = weighStart(
+        'a list of orders with a reading pane',
+        tied,
+        tied[0],
+        catalog,
+        {weights: WEIGHTS},
+      );
+      expect(start).toBe('list-pane');
+    });
+
+    it('keeps the pick when the ranker does not tie', () => {
+      const ahead = [page('list-alpha', 6, 'Lists'), ...tied.slice(1)];
+      const start = weighStart(
+        'a list of orders with a reading pane',
+        ahead,
+        ahead[0],
+        catalog,
+        {weights: WEIGHTS},
+      );
+      expect(start).toBe('list-alpha');
+    });
+
+    it('falls back to the most typical tied template when no descriptor tells them apart', () => {
+      const typical = [
+        {...page('list-alpha', 5, 'Lists'), typical: 0.2},
+        {...page('list-pane', 5, 'Lists'), typical: 0.8},
+        ...RANKED,
+      ];
+      const start = weighStart(
+        'a list of orders',
+        typical,
+        typical[0],
+        catalog,
+        {weights: WEIGHTS},
+      );
+      expect(start).toBe('list-pane');
+    });
+  });
+
+  describe('an exact tie between templates with ids of different lengths', () => {
+    // The family's base and its variants are told apart by the ranker's base
+    // flag, not by how many parts an id has.
+    const catalog = [
+      ...CATALOG,
+      {
+        name: 'list-alpha',
+        displayName: 'Plain List',
+        category: 'Lists - Plain',
+        description: 'A plain list of records.',
+      },
+      {
+        name: 'list-with-reading-pane',
+        displayName: 'List with Reading Pane',
+        category: 'Lists - Pane',
+        description: 'A list of records with a reading pane beside it.',
+        keywords: ['reading pane'],
+      },
+    ];
+    const variant = (/** @type {string} */ name) => ({
+      ...page(name, 5, 'Lists'),
+      base: false,
+    });
+
+    it('settles a tie between two variants by their descriptors', () => {
+      const tied = [
+        variant('list-alpha'),
+        variant('list-with-reading-pane'),
+        ...RANKED,
+      ];
+      const start = weighStart(
+        'a list of orders with a reading pane',
+        tied,
+        tied[0],
+        catalog,
+        {weights: WEIGHTS},
+      );
+      expect(start).toBe('list-with-reading-pane');
+    });
+
+    it("keeps the family's base ahead of a tied variant", () => {
+      const tied = [
+        page('list-alpha', 5, 'Lists'),
+        variant('list-with-reading-pane'),
+        ...RANKED,
+      ];
+      const start = weighStart(
+        'a list of orders with a reading pane',
+        tied,
+        tied[0],
+        catalog,
+        {weights: WEIGHTS},
+      );
+      expect(start).toBe('list-alpha');
+    });
+  });
+
+  describe('a template the tables do not list (cold start)', () => {
+    // A made-up family the tables have never seen, described only by its own
+    // descriptor, next to listed templates with descriptors of their own.
+    const catalog = [
+      {name: 'board', displayName: 'Kanban Board', keywords: ['kanban']},
+      {name: 'charts', displayName: 'Charts', category: 'Charts - Overview'},
+      {name: 'grid', displayName: 'Grid'},
+      {
+        name: 'gauge-fleet',
+        displayName: 'Fleet Gauges',
+        category: 'Gauges - Fleet',
+        keywords: ['gauges', 'fleet', 'meters'],
+      },
+    ];
+
+    it('starts from it when the idea names its own words', () => {
+      const ranked = [page('gauge-fleet', 9, 'Gauges'), ...RANKED];
+      const start = weighStart(
+        'fleet gauges with meters per kanban lane',
+        ranked,
+        ranked[0],
+        catalog,
+        {weights: WEIGHTS},
+      );
+      expect(start).toBe('gauge-fleet');
+    });
+
+    it('starts from it when the idea names its family first', () => {
+      const ranked = [page('gauge-fleet', 9, 'Gauges'), ...RANKED];
+      const start = weighStart(
+        'gauges page with a kanban board',
+        ranked,
+        ranked[0],
+        catalog,
+        {weights: WEIGHTS},
+      );
+      expect(start).toBe('gauge-fleet');
+    });
+
+    it("never counts a stopword from another template's keywords", () => {
+      // "side" in grid's "side by side" keyword is one of search's stopwords;
+      // it must not answer the idea's "sides", which is not.
+      const own = [
+        {name: 'board'},
+        {name: 'charts'},
+        {
+          name: 'grid',
+          displayName: 'Grid',
+          keywords: ['side by side', 'orders'],
+        },
+        {name: 'fold', displayName: 'Folding Rows'},
+      ];
+      const ranked = [page('fold', 9, 'Fold'), ...RANKED];
+      const start = weighStart(
+        'rows on two sides with orders on cards',
+        ranked,
+        ranked[0],
+        own,
+        {weights: WEIGHTS},
+      );
+      expect(start).toBe('fold');
+    });
+
+    it("counts another template's phrase keyword only as the whole phrase", () => {
+      // grid's "table of contents" is one phrase: its words never count alone,
+      // and named in order it counts once.
+      const own = [
+        {name: 'board'},
+        {name: 'charts'},
+        {name: 'grid', displayName: 'Grid', keywords: ['table of contents']},
+        {name: 'fold', displayName: 'Folding Rows'},
+      ];
+      const ranked = [
+        page('fold', 9, 'Fold'),
+        page('grid', 3, 'Grid'),
+        page('charts', 1, 'Charts'),
+        page('board', 0.5, 'Board'),
+        page('top-nav', 0, 'Shell'),
+      ];
+      /** @param {string} idea */
+      const start = idea =>
+        weighStart(idea, ranked, ranked[0], own, {weights: WEIGHTS});
+      expect(start('folding table of orders and contents on cards')).toBe(
+        'fold',
+      );
+      expect(start('a grid table of contents with folding on cards')).toBe(
+        'grid',
+      );
+    });
+
+    it('starts a new template its one phrase keyword describes', () => {
+      // The tables do not list acme-ledger; its own words decide. The phrase
+      // the idea names counts all three of its words.
+      const own = [
+        {name: 'board', displayName: 'Kanban Board', keywords: ['kanban']},
+        {name: 'charts', displayName: 'Charts'},
+        {name: 'grid', displayName: 'Grid'},
+        {name: 'acme-ledger', keywords: ['quarterly vendor ledger']},
+      ];
+      const ranked = [page('acme-ledger', 9, 'Acme'), ...RANKED];
+      expect(
+        weighStart(
+          'a quarterly vendor ledger page on a kanban board',
+          ranked,
+          ranked[0],
+          own,
+          {weights: WEIGHTS},
+        ),
+      ).toBe('acme-ledger');
+    });
+
+    it("never counts a stopword from the idea's words", () => {
+      // "basically" is one of search's stopwords and stems to "basic", the
+      // word of grid's category; it must not tip the count to grid.
+      const own = [
+        {name: 'board'},
+        {name: 'charts'},
+        {name: 'grid', displayName: 'Grid', category: 'Grid - Basic'},
+        {name: 'fold', displayName: 'Folding Rows'},
+      ];
+      const ranked = [page('fold', 9, 'Fold'), ...RANKED];
+      const start = weighStart(
+        'basically a grid of rows on cards',
+        ranked,
+        ranked[0],
+        own,
+        {weights: WEIGHTS},
+      );
+      expect(start).toBe('fold');
+    });
+
+    it('yields to the listed template whose own words the idea names more', () => {
+      const ranked = [page('gauge-fleet', 9, 'Gauges'), ...RANKED];
+      const start = weighStart(
+        'a kanban board with a fleet column',
+        ranked,
+        ranked[0],
+        catalog,
+        {weights: WEIGHTS},
+      );
+      expect(start).toBe('board');
+    });
+  });
+
+  it("keeps the ranker's template for an idea that asks for a new page", () => {
+    const start = weighStart('the existing page', RANKED, RANKED[0], CATALOG, {
+      weights: WEIGHTS,
+      newPage: true,
+    });
+    expect(start).toBe('charts');
+  });
+
+  it('starts a new page from the shell when the ranker has no template', () => {
+    const start = weighStart('the existing page', RANKED, null, CATALOG, {
+      weights: WEIGHTS,
+      newPage: true,
+    });
+    expect(start).toBeNull();
+  });
+
+  it('keeps a template the ranker placed by its frame', () => {
+    const framed = {...RANKED[1], containerMatched: true};
+    for (const idea of ['the existing page', 'a kanban']) {
+      const start = weighStart(idea, RANKED, framed, CATALOG, {
+        weights: WEIGHTS,
+      });
+      expect(start).toBe('grid');
+    }
+  });
+
+  it('is deterministic', () => {
+    const run = () =>
+      weighStart('kanban charts cards', RANKED, RANKED[0], CATALOG, {
+        weights: WEIGHTS,
+      });
+    expect(run()).toBe(run());
+  });
+});
+
+describe('weightWords', () => {
+  it('keeps letter words of two or more characters', () => {
+    expect(weightWords('A 3-col Dashboard, v2 KPIs!')).toEqual([
+      'col',
+      'dashboard',
+      'kpis',
+    ]);
+  });
+});
+
+describe('isWeightsFile', () => {
+  it('accepts a well-formed file', () => {
+    expect(isWeightsFile(WEIGHTS)).toBe(true);
+  });
+
+  it('rejects a file whose rows, bias or blend do not fit the candidates', () => {
+    const [first, second] = WEIGHTS.tables;
+    expect(isWeightsFile({...WEIGHTS, blend: [1, 2, 3]})).toBe(false);
+    expect(
+      isWeightsFile({...WEIGHTS, tables: [{...first, rows: ['ab']}, second]}),
+    ).toBe(false);
+    expect(
+      isWeightsFile({...WEIGHTS, tables: [{...first, bias: [0]}, second]}),
+    ).toBe(false);
+    expect(isWeightsFile({version: 1})).toBe(false);
+    expect(isWeightsFile(null)).toBe(false);
+  });
+});
+
+describe('an exact tie in the pick model', () => {
+  // The pick table scores `board` and `grid` the same, and the ranker ties
+  // them too (and starts neither), so the blend gives both exactly the same
+  // score.
+  const catalog = [
+    {
+      name: 'board',
+      displayName: 'Kanban board',
+      category: 'Board - Kanban',
+      description: 'cards in lanes',
+    },
+    {
+      name: 'charts',
+      displayName: 'Charts',
+      category: 'Charts - Basic',
+      description: 'a chart',
+    },
+    {
+      name: 'grid',
+      displayName: 'Card grid',
+      category: 'Grid - Cards',
+      description: 'cards in a grid',
+    },
+  ];
+  const ranked = [
+    page('board', 1, 'Board'),
+    page('grid', 1, 'Grid'),
+    page('charts', 0, 'Charts'),
+  ];
+  const weights = {
+    ...WEIGHTS,
+    pick: {
+      tables: [table({[stem('cards')]: [0, 2, 0, 2]})],
+      blend: [1, 0, 0, 0.5, 0, 0, 0],
+    },
+  };
+
+  it('goes to the template whose own descriptor names more of the idea', () => {
+    const order = blendOrder(
+      'cards laid out in a grid',
+      ranked,
+      null,
+      catalog,
+      weights,
+    );
+    expect(order?.slice(0, 2)).toEqual(['grid', 'board']);
+  });
+
+  it('does not depend on the order of the candidates in the weights file', () => {
+    // Only the rank features count here, so an order-based rank of the tied
+    // pair would decide the start.
+    const byRank = {
+      ...weights,
+      pick: {...weights.pick, blend: [0, 1, 0, 0, 1, 0, 0]},
+    };
+    const reversedByRank = {
+      ...byRank,
+      candidates: [SHELL, 'grid', 'charts', 'board'],
+      tables: WEIGHTS.tables.map(t => ({
+        ...t,
+        bias: [t.bias[0], t.bias[3], t.bias[2], t.bias[1]],
+        rows: t.rows.map(r => r[0] + r[3] + r[2] + r[1]),
+      })),
+    };
+    const idea = 'cards laid out in a grid';
+    expect(
+      blendOrder(idea, ranked, null, catalog, reversedByRank)?.slice(0, 2),
+    ).toEqual(blendOrder(idea, ranked, null, catalog, byRank)?.slice(0, 2));
+    const reversed = {
+      ...weights,
+      candidates: [SHELL, 'grid', 'charts', 'board'],
+      tables: WEIGHTS.tables.map(t => ({
+        ...t,
+        bias: [t.bias[0], t.bias[3], t.bias[2], t.bias[1]],
+        rows: t.rows.map(r => r[0] + r[3] + r[2] + r[1]),
+      })),
+      pick: {
+        ...weights.pick,
+        tables: [table({[stem('cards')]: [0, 2, 0, 2]})],
+      },
+    };
+    expect(
+      blendOrder(
+        'cards laid out in a grid',
+        ranked,
+        null,
+        catalog,
+        reversed,
+      )?.slice(0, 2),
+    ).toEqual(['grid', 'board']);
+  });
+});

@@ -1,0 +1,95 @@
+/**
+ * Blue-Patterns-UI Motion Engine Tokens & Primitives
+ * Zero-runtime dependency, pure CSS linear() spring approximations & WAAPI transitions.
+ */
+
+:root {
+  /* Default baseline: reduced-motion safe (instant transitions) */
+  --motion-duration-instant: 0ms;
+  --motion-duration-fast: 0ms;
+  --motion-duration-normal: 0ms;
+  --motion-duration-slow: 0ms;
+
+  --motion-spring-snappy: linear(0, 1);
+  --motion-spring-gentle: linear(0, 1);
+  --motion-spring-bouncy: linear(0, 1);
+
+  --motion-easing-standard: linear;
+  --motion-easing-emphasized: linear;
+  --motion-easing-decelerate: linear;
+  --motion-easing-accelerate: linear;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  :root {
+    /* Physics-based durations */
+    --motion-duration-instant: 80ms;
+    --motion-duration-fast: 150ms;
+    --motion-duration-normal: 240ms;
+    --motion-duration-slow: 380ms;
+
+    /* CSS linear() spring approximations for crisp tactile UI */
+    /* Snappy: 180ms fast settling, zero overshoot - buttons, switches, checkboxes */
+    --motion-spring-snappy: linear(
+      0, 0.006, 0.025 2.8%, 0.101 6.1%, 0.539 18.9%,
+      0.721 25.3%, 0.849 31.6%, 0.931 38.4%, 0.968 45.4%,
+      0.985 52.6%, 0.994 60.1%, 0.998 67.9%, 1
+    );
+
+    /* Gentle: 280ms smooth deceleration - dialogs, drawers, sheets, popovers */
+    --motion-spring-gentle: cubic-bezier(0.16, 1, 0.3, 1);
+
+    /* Bouncy: 360ms subtle overshoot (damping ~0.7) - toasts, badges, floating pills */
+    --motion-spring-bouncy: linear(
+      0, 0.009, 0.035 2.1%, 0.141 4.4%, 0.723 12.9%,
+      0.938 16.7%, 1.017 20.2%, 1.049 23.6%, 1.054 27.2%,
+      1.038 31.8%, 1.018 36.6%, 1.004 42.1%, 0.997 48.7%,
+      0.998 57.5%, 1
+    );
+
+    /* Standard cubic-bezier easings */
+    --motion-easing-standard: cubic-bezier(0.2, 0, 0, 1);
+    --motion-easing-emphasized: cubic-bezier(0.05, 0.7, 0.1, 1);
+    --motion-easing-decelerate: cubic-bezier(0, 0, 0.2, 1);
+    --motion-easing-accelerate: cubic-bezier(0.4, 0, 1, 1);
+  }
+}
+
+/* Micro-interaction utility classes */
+.bp-presence-enter {
+  opacity: 0;
+  transform: scale(0.96) translateY(4px);
+  will-change: opacity, transform;
+}
+
+.bp-presence-active {
+  opacity: 1;
+  transform: scale(1) translateY(0);
+  transition: opacity var(--motion-duration-fast) var(--motion-easing-standard),
+              transform var(--motion-duration-normal) var(--motion-spring-gentle);
+}
+
+.bp-presence-exit {
+  opacity: 0;
+  transform: scale(0.96) translateY(2px);
+  transition: opacity var(--motion-duration-instant) var(--motion-easing-accelerate),
+              transform var(--motion-duration-fast) var(--motion-easing-accelerate);
+  will-change: opacity, transform;
+}
+
+.bp-collapse-container {
+  overflow: hidden;
+  transition: height var(--motion-duration-normal) var(--motion-spring-gentle),
+              opacity var(--motion-duration-normal) var(--motion-easing-standard);
+  will-change: height, opacity;
+}
+
+.bp-shared-indicator {
+  position: absolute;
+  pointer-events: none;
+  z-index: 1;
+  border-radius: var(--radius-sm, 4px);
+  transition: transform var(--motion-duration-normal) var(--motion-spring-snappy),
+              width var(--motion-duration-normal) var(--motion-spring-snappy),
+              height var(--motion-duration-normal) var(--motion-spring-snappy);
+}

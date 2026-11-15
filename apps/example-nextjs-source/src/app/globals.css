@@ -1,0 +1,7 @@
+/* Copyright (c) Meta Platforms, Inc. and affiliates. */
+
+@import "./layers.css";
+@import "@blue-patterns/core/reset.css";
+@import "@blue-patterns/theme-neutral/theme.css";
+
+@stylex;
